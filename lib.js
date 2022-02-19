@@ -154,6 +154,8 @@ const unpause = async (pid) => {
     coloredLog(pid, err.message);
   }
 
+  checkPredictionContract(pid);
+
 };
 
 const startExecuteRound = async (pid, data) => {
@@ -390,8 +392,7 @@ const checkPredictionContract = async (pid) => {
 
   if (isPaused) {
     coloredLog(pid, "Prediction is paused so unpausing...");
-    await unpause(pid);
-    await sleep(2000);
+    return unpause(pid);
   }
 
   const genesisStartOnce = await predictionContract.methods
