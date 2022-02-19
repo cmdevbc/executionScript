@@ -1,8 +1,3 @@
-//tesla ftx code:TSLA/USD
-
-//log colors:
-//black,red,green,yellow,blue,magenta,cyan,white,gray,grey,brightRed,brightGreen,brightYellow,brightBlue,brightMagenta,brightCyan,brightWhite
-
 //gasLevel: SafeGasPrice, ProposeGasPrice, FastGasPrice
 //gasOffset: in wei 
 
