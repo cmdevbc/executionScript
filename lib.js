@@ -1,6 +1,7 @@
 const Web3 = require("web3");
 const Provider = require("@truffle/hdwallet-provider");
 const config = require("./config.js");
+const predictions = require("./predictions.js");
 const abi = require("./abi.json");
 var colors = require('colors/safe');
 const Moralis = require('moralis/node');
@@ -11,7 +12,6 @@ const privateKey = process.env.PRIVATE_KEY;
 let tempweb3 = new Web3("https://bsc-dataseed.binance.org");
 const operator = tempweb3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
 const operatorAddress = operator.address;
-const predictions = config.predictions;
 const contracts = {};
 const web3s = {};
 const priceCache = {};

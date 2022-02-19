@@ -1,10 +1,10 @@
-const config = require('./config.js');
+const predictions = require('./predictions.js');
 require('dotenv').config()
 const { sleep, checkPredictionContract, pause, getPredictionContract } = require("./lib.js");
 
 const runOnStart = async () => {
-    for (let i = 0; i < config.predictions.length; i++) {
-      if(config.predictions[i].keepPaused){
+    for (let i = 0; i < predictions.length; i++) {
+      if(predictions[i].keepPaused){
         const predictionContract = getPredictionContract(i);
         const isPaused = await predictionContract.methods.paused().call();
         if(!isPaused) pause(i);
