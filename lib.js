@@ -36,7 +36,10 @@ const checkTime = () => {
   const minute = date.getMinutes();
   const day = date.getDay();
   if (day == 0 || day == 6) return false;
-  if (hour < globalConfig.stockHours.startHour || hour >= globalConfig.stockHours.endHour)
+  if (
+    hour < globalConfig.stockHours.startHour ||
+    hour >= globalConfig.stockHours.endHour
+  )
     return false;
   if (
     hour == globalConfig.stockHours.startHour &&
@@ -96,7 +99,9 @@ const getWeb3 = (pid) => {
   let web3;
   if (web3s[predictionData.network]) web3 = web3s[predictionData.network];
   else {
-    web3 = new Web3(globalConfig.networkSettings[predictionData.network].currentRpc);
+    web3 = new Web3(
+      globalConfig.networkSettings[predictionData.network].currentRpc
+    );
     web3s[predictionData.network] = web3;
   }
   return web3;
@@ -172,7 +177,7 @@ const unpause = async (pid) => {
   }
 };
 
-const saveErrorData = async(pid, error, currentRoundNo, errorFunction) => {
+const saveErrorData = async (pid, error, currentRoundNo, errorFunction) => {
   try {
     const ExecutionError = Moralis.Object.extend("ExecutionError");
     const executionError = new ExecutionError();
@@ -186,7 +191,7 @@ const saveErrorData = async(pid, error, currentRoundNo, errorFunction) => {
   } catch (err) {
     coloredLog(pid, "Couldnt save error information to Moralis");
   }
-}
+};
 
 const startExecuteRound = async (pid, data) => {
   const date = new Date(Date.now()).toLocaleString();
@@ -235,20 +240,7 @@ const startExecuteRound = async (pid, data) => {
     const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
     const receipt = await predictionContract.methods
       .executeRound(price.toString())
-      .send({ from: operatorAddress, gasPrice, nonce })
-      .catch(async (error) => {
-        coloredLog(pid, "ERROR REVERT:");
-        coloredLog(pid, "" + error.message);
-
-        saveErrorData(pid, error, currentRoundNo, "executeRound");
-
-        if (error.message.includes(">buffer")) {
-          await pause(pid);
-          return checkPredictionContract(pid);
-        } else if (error.message.includes("Pausable: paused")) {
-          return checkPredictionContract(pid);
-        } else return retryFailedExecuteRound(pid);
-      });
+      .send({ from: operatorAddress, gasPrice, nonce });
 
     if (receipt) {
       coloredLog(pid, `: Transaction hash: ${receipt.transactionHash}`);
@@ -269,10 +261,18 @@ const startExecuteRound = async (pid, data) => {
 
       return successExecuteRound(pid);
     }
-  } catch (err) {
-    coloredLog(pid, "" + err.message);
-    coloredLog(pid, "Error.... retrying...");
-    return retryFailedExecuteRound(pid);
+  } catch (error) {
+    coloredLog(pid, "ERROR REVERT:");
+    coloredLog(pid, "" + error.message);
+
+    saveErrorData(pid, error, currentRoundNo, "executeRound");
+
+    if (error.message.includes(">buffer")) {
+      await pause(pid);
+      return checkPredictionContract(pid);
+    } else {
+      return checkPredictionContract(pid);
+    }
   }
 };
 
@@ -296,7 +296,8 @@ const restartOnMorning = async (pid) => {
   var now = new Date();
 
   if (day > 0 && day < 5) {
-    if (hour > globalConfig.stockHours.endHour - 1) now.setDate(now.getDate() + 1);
+    if (hour > globalConfig.stockHours.endHour - 1)
+      now.setDate(now.getDate() + 1);
   } else if (day == 5 && hour > globalConfig.stockHours.endHour - 1)
     now.setDate(now.getDate() + 3);
   else if (day == 6) now.setDate(now.getDate() + 2);
