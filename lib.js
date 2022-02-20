@@ -69,7 +69,6 @@ const getPriceBINANCE = async (code) => {
 };
 
 const getPriceKUCOIN = async (code) => {
-  console.log("getting kucoin price for code: ", code);
   try {
     const data = await fetch(
       `https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${code}`
@@ -122,40 +121,45 @@ function sleep(ms) {
 }
 
 const pause = async (pid) => {
-  coloredLog(pid, "pausing...");
+  coloredLog(pid, "pausing step 1 ...");
   const gasPrice = await getGasPrice(pid);
   const predictionContract = getPredictionContract(pid);
+  coloredLog(pid, "pausing with gas price: "+gasPrice);
   try{
     await predictionContract.methods
     .pause()
     .send({ from: operatorAddress, gasPrice });
 
     coloredLog(pid, "paused");
+    return;
   }
   catch(err){
     coloredLog(pid, "error on pausing");
     coloredLog(pid, err.message);
+    return;
   }
 };
 
 const unpause = async (pid) => {
-  coloredLog(pid, "unpausing...");
+  coloredLog(pid, "unpausing step 1...");
   const gasPrice = await getGasPrice(pid);
   const predictionContract = getPredictionContract(pid);
+  coloredLog(pid, "unpausing gas price: "+gasPrice);
   try{
     await predictionContract.methods
     .unpause()
     .send({ from: operatorAddress, gasPrice });
 
     coloredLog(pid, "unpaused");
+
+    return checkPredictionContract(pid);
   }
   catch(err){
     coloredLog(pid, "error on unpausing");
     coloredLog(pid, err.message);
+
+    return checkPredictionContract(pid);
   }
-
-  checkPredictionContract(pid);
-
 };
 
 const startExecuteRound = async (pid, data) => {
