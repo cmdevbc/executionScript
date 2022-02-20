@@ -276,12 +276,6 @@ const startExecuteRound = async (pid, data) => {
   }
 };
 
-const retryFailedExecuteRound = async (pid) => {
-  await sleep(5000);
-  coloredLog(pid, "retrying... ");
-  startExecuteRound(pid);
-};
-
 const successExecuteRound = async (pid) => {
   await sleep(predictions[pid].interval * 1000 + 2000);
   startExecuteRound(pid);
@@ -486,7 +480,6 @@ module.exports = {
   pause,
   unpause,
   startExecuteRound,
-  retryFailedExecuteRound,
   successExecuteRound,
   restartOnMorning,
   checkPredictionContract,
