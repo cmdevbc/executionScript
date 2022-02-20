@@ -31,7 +31,7 @@ const config = {
             rpcOptions: ["https://speedy-nodes-nyc.moralis.io/1d0a9164468a9049fed45295/bsc/testnet", 'https://data-seed-prebsc-1-s1.binance.org:8545/'],
             checkGas: false,
             gasApi: "https://gbsc.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
-            gasPrice: '5100000000'
+            gasPrice: '10000000000'
         },
         POLYGONTEST: {
             gasLevel:'ProposeGasPrice',
@@ -41,7 +41,7 @@ const config = {
             rpcOptions: ["https://matic-mumbai.chainstacklabs.com"],
             checkGas: false,
             gasApi: "https://gpoly.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
-            gasPrice: '100000000000'
+            gasPrice: '2000000000'
         },
     },
     stockHours: {
