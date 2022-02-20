@@ -302,8 +302,8 @@ const restartOnMorning = async (pid) => {
   else if (day == 6) now.setDate(now.getDate() + 2);
   else if (day == 0) now.setDate(now.getDate() + 1);
 
-  now.setHours(config.stockHours.startHour);
-  now.setMinutes(config.stockHours.startMin);
+  now.setHours(globalConfig.stockHours.startHour);
+  now.setMinutes(globalConfig.stockHours.startMin);
   now.setMilliseconds(0);
 
   const mSecondsLeft = now.getTime() - Date.now();
@@ -392,7 +392,7 @@ const getPredictionContract = (pid) => {
 
 const checkPredictionContract = async (pid) => {
   //const network =  predictions[pid].network;
-  //if(!config.networkSettings[network].updatingRpc) await chooseRpc(pid);
+  //if(!globalConfig.networkSettings[network].updatingRpc) await chooseRpc(pid);
 
   const predictionContract = getPredictionContract(pid);
 
