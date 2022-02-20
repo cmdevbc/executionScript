@@ -263,14 +263,15 @@ const startExecuteRound = async (pid, data) => {
     }
   } catch (error) {
     coloredLog(pid, "ERROR REVERT:");
-    coloredLog(pid, "" + error.message);
 
     saveErrorData(pid, error, currentRoundNo, "executeRound");
 
     if (error.message.includes(">buffer")) {
+      coloredLog(pid, "round ending timer passed, need to pause/unpause..");
       await pause(pid);
       return checkPredictionContract(pid);
     } else {
+      coloredLog(pid, "" + error.message);
       return checkPredictionContract(pid);
     }
   }
