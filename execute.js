@@ -5,6 +5,7 @@ const { sleep, checkPredictionContract, pause, getPredictionContract } = require
 
 const runOnStart = async () => {
     for (let i = 0; i < config.predictions.length; i++) {
+
       if(config.predictions[i].keepPaused){
         const predictionContract = getPredictionContract(i);
         const isPaused = await predictionContract.methods.paused().call();

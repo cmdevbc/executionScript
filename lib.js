@@ -1,4 +1,5 @@
 const Web3 = require("web3");
+const fs = require('fs');
 const Provider = require("@truffle/hdwallet-provider");
 const globalConfig = require("./globalConfig.js");
 const config = require("./config.js");
@@ -224,6 +225,8 @@ const startExecuteRound = async (pid, data) => {
     if (!priceCache[pid]) priceCache[pid] = {};
     priceCache[pid][currentRoundNo] = price;
     priceCache[pid]["timestamp" + currentRoundNo] = priceTimestamp;
+
+    savePriceDataToFile(pid, currentRoundNo, price, priceTimestamp);
   }
 
   coloredLog(
@@ -386,6 +389,28 @@ const getPredictionContract = (pid) => {
   return predictionContract;
 };
 
+const savePriceDataToFile = (pid, currentRoundNo, price, timestamp) => {
+  const dataToSave = {round:currentRoundNo, price, timestamp}
+  const fileName = './roundData/'+ predictions[pid].network + '_' + predictions[pid].title + '.json';
+  fs.writeFileSync(fileName, JSON.stringify(dataToSave));
+}
+
+const loadPriceDataToCache = (pid, currentRoundNo) => {
+  const fileName = './roundData/'+ predictions[pid].network + '_' + predictions[pid].title + '.json';
+  if (!fs.existsSync(fileName)) {
+    fs.writeFileSync(fileName, JSON.stringify({round:0, price:0, timestamp:0}));
+  }
+  else {
+    let rawdata = fs.readFileSync(fileName);
+    let roundPriceData = JSON.parse(rawdata);  
+    if(roundPriceData.round == currentRoundNo){
+      if (!priceCache[pid]) priceCache[pid] = {};
+      priceCache[pid][currentRoundNo] = roundPriceData.price;
+      priceCache[pid]["timestamp" + currentRoundNo] = roundPriceData.timestamp;
+    }
+  }
+}
+
 const checkPredictionContract = async (pid) => {
   //const network =  predictions[pid].network;
   //if(!globalConfig.networkSettings[network].updatingRpc) await chooseRpc(pid);
@@ -393,6 +418,13 @@ const checkPredictionContract = async (pid) => {
   const predictionContract = getPredictionContract(pid);
 
   coloredLog(pid, "Prediction check started...");
+
+  const currentRoundNo = await predictionContract.methods
+  .currentEpoch()
+  .call();
+
+  loadPriceDataToCache(pid, currentRoundNo);
+
   const isPaused = await predictionContract.methods.paused().call();
 
   if (predictions[pid].isStock && !checkTime()) {
@@ -417,9 +449,6 @@ const checkPredictionContract = async (pid) => {
 
   //its already running. get seconds left and run
   if (genesisStartOnce) {
-    const currentRoundNo = await predictionContract.methods
-      .currentEpoch()
-      .call();
     const roundData = await predictionContract.methods
       .timestamps(currentRoundNo)
       .call();
