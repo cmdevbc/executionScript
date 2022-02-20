@@ -3,24 +3,29 @@ const Provider = require("@truffle/hdwallet-provider");
 const config = require("./config.js");
 const predictions = require("./predictions.js");
 const abi = require("./abi.json");
-var colors = require('colors/safe');
-const Moralis = require('moralis/node');
+var colors = require("colors/safe");
+const Moralis = require("moralis/node");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 const privateKey = process.env.PRIVATE_KEY;
 let tempweb3 = new Web3("https://bsc-dataseed.binance.org");
-const operator = tempweb3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
+const operator = tempweb3.eth.accounts.privateKeyToAccount(
+  process.env.PRIVATE_KEY
+);
 const operatorAddress = operator.address;
 const contracts = {};
 const web3s = {};
 const priceCache = {};
 
-Moralis.start({ serverUrl: config.moralis.serverUrl, appId: config.moralis.appId });
+Moralis.start({
+  serverUrl: config.moralis.serverUrl,
+  appId: config.moralis.appId,
+});
 
 const coloredLog = (pid, ...txt) => {
   const title = predictions[pid].title ? predictions[pid].title : pid;
-  console.log(colors[predictions[pid].color](title+ ' : ' + txt.join(" ")));
+  console.log(colors[predictions[pid].color](title + " : " + txt.join(" ")));
 };
 
 const checkTime = () => {
@@ -103,10 +108,15 @@ const getGasPrice = async (pid) => {
     try {
       const data = await fetch(networkConfig.gasApi);
       const dataJson = await data.json();
-      const gasLevel = networkConfig.gasLevel ? networkConfig.gasLevel : "FastGasPrice";
+      const gasLevel = networkConfig.gasLevel
+        ? networkConfig.gasLevel
+        : "FastGasPrice";
       const gas = dataJson.result[gasLevel];
       const gasOffset = networkConfig.gasOffset ? networkConfig.gasOffset : 0;
-      const gasPriceWei = getWeb3(pid).utils.toWei((parseFloat(gas)+gasOffset).toString(), 'gwei');
+      const gasPriceWei = getWeb3(pid).utils.toWei(
+        (parseFloat(gas) + gasOffset).toString(),
+        "gwei"
+      );
       return gasPriceWei.toString();
     } catch (err) {
       return fallbackGas;
@@ -124,16 +134,15 @@ const pause = async (pid) => {
   coloredLog(pid, "pausing step 1 ...");
   const gasPrice = await getGasPrice(pid);
   const predictionContract = getPredictionContract(pid);
-  coloredLog(pid, "pausing with gas price: "+gasPrice);
-  try{
+  coloredLog(pid, "pausing with gas price: " + gasPrice);
+  try {
     await predictionContract.methods
-    .pause()
-    .send({ from: operatorAddress, gasPrice });
+      .pause()
+      .send({ from: operatorAddress, gasPrice });
 
     coloredLog(pid, "paused");
     return;
-  }
-  catch(err){
+  } catch (err) {
     coloredLog(pid, "error on pausing");
     coloredLog(pid, err.message);
     return;
@@ -144,23 +153,38 @@ const unpause = async (pid) => {
   coloredLog(pid, "unpausing step 1...");
   const gasPrice = await getGasPrice(pid);
   const predictionContract = getPredictionContract(pid);
-  coloredLog(pid, "unpausing gas price: "+gasPrice);
-  try{
+  coloredLog(pid, "unpausing gas price: " + gasPrice);
+  try {
     await predictionContract.methods
-    .unpause()
-    .send({ from: operatorAddress, gasPrice });
+      .unpause()
+      .send({ from: operatorAddress, gasPrice });
 
     coloredLog(pid, "unpaused");
 
     return checkPredictionContract(pid);
-  }
-  catch(err){
+  } catch (err) {
     coloredLog(pid, "error on unpausing");
     coloredLog(pid, err.message);
 
     return checkPredictionContract(pid);
   }
 };
+
+const saveErrorData = async(pid, error, currentRoundNo, errorFunction) => {
+  try {
+    const ExecutionError = Moralis.Object.extend("ExecutionError");
+    const executionError = new ExecutionError();
+    executionError.set("errorFunction", errorFunction);
+    executionError.set("prediction", predictions[pid].title);
+    executionError.set("epoch", currentRoundNo.toString());
+    executionError.set("network", predictions[pid].network);
+    executionError.set("message", error.message);
+    executionError.set("timestamp", Date.now());
+    executionError.save();
+  } catch (err) {
+    coloredLog(pid, "Couldnt save error information to Moralis");
+  }
+}
 
 const startExecuteRound = async (pid, data) => {
   const date = new Date(Date.now()).toLocaleString();
@@ -177,66 +201,57 @@ const startExecuteRound = async (pid, data) => {
 
   const predictionContract = getPredictionContract(pid);
 
-  const currentRoundNo = await predictionContract.methods
-  .currentEpoch()
-  .call();
+  const currentRoundNo = await predictionContract.methods.currentEpoch().call();
 
   let price;
   let priceTimestamp;
 
-  if(priceCache[pid] && priceCache[pid][currentRoundNo]){
+  if (priceCache[pid] && priceCache[pid][currentRoundNo]) {
     coloredLog(pid, "getting price from CACHE for round:" + currentRoundNo);
     price = priceCache[pid][currentRoundNo];
-    priceTimestamp =  priceCache[pid]["timestamp"+currentRoundNo]
-  }
-  else {
+    priceTimestamp = priceCache[pid]["timestamp" + currentRoundNo];
+  } else {
     coloredLog(pid, "getting price for round:" + currentRoundNo);
     price = await getPrice(pid);
     priceTimestamp = Date.now();
-    if(!priceCache[pid]) priceCache[pid] = {};
+    if (!priceCache[pid]) priceCache[pid] = {};
     priceCache[pid][currentRoundNo] = price;
-    priceCache[pid]["timestamp"+currentRoundNo] = priceTimestamp;
+    priceCache[pid]["timestamp" + currentRoundNo] = priceTimestamp;
   }
 
-  coloredLog(pid, "got price " + price.toString() + " @ timestamp: "+priceTimestamp + " from api: "+predictions[pid].apitype);
+  coloredLog(
+    pid,
+    "got price " +
+      price.toString() +
+      " @ timestamp: " +
+      priceTimestamp +
+      " from api: " +
+      predictions[pid].apitype
+  );
 
   try {
     const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
     const receipt = await predictionContract.methods
       .executeRound(price.toString())
       .send({ from: operatorAddress, gasPrice, nonce })
-      .catch( async (error) => {
+      .catch(async (error) => {
         coloredLog(pid, "ERROR REVERT:");
         coloredLog(pid, "" + error.message);
 
-        try{
-          const ExecutionError = Moralis.Object.extend("ExecutionError");
-          const executionError = new ExecutionError();
-          executionError.set("prediction", predictions[pid].title);
-          executionError.set("epoch", currentRoundNo.toString());
-          executionError.set("network", predictions[pid].network);
-          executionError.set("message", error.message);
-          executionError.set("timestamp", Date.now());
-          executionError.save();
-        }
-        catch(err){
-          coloredLog(pid, "Couldnt save error information to Moralis");
-        }
+        saveErrorData(pid, error, currentRoundNo, "executeRound");
 
         if (error.message.includes(">buffer")) {
           await pause(pid);
           return checkPredictionContract(pid);
-        }
-        else if(error.message.includes("Pausable: paused")){
+        } else if (error.message.includes("Pausable: paused")) {
           return checkPredictionContract(pid);
-        }
-        else return retryFailedExecuteRound(pid);
+        } else return retryFailedExecuteRound(pid);
       });
 
     if (receipt) {
       coloredLog(pid, `: Transaction hash: ${receipt.transactionHash}`);
 
-      try{
+      try {
         const ExecutionPrice = Moralis.Object.extend("ExecutionPrice");
         const executionPrice = new ExecutionPrice();
         executionPrice.set("prediction", predictions[pid].title);
@@ -246,8 +261,7 @@ const startExecuteRound = async (pid, data) => {
         executionPrice.set("timestamp", priceTimestamp);
         executionPrice.set("api", predictions[pid].apitype);
         executionPrice.save();
-      }
-      catch(err){
+      } catch (err) {
         coloredLog(pid, "Couldnt save price information to Moralis");
       }
 
@@ -422,7 +436,8 @@ const checkPredictionContract = async (pid) => {
     const msecondsLeft = 1000 * roundData.lockTimestamp - timestamp;
 
     coloredLog(
-      pid, "contract is already active so running after ms: " + msecondsLeft
+      pid,
+      "contract is already active so running after ms: " + msecondsLeft
     );
 
     if (msecondsLeft > 0) await sleep(msecondsLeft + 2000);
@@ -430,35 +445,32 @@ const checkPredictionContract = async (pid) => {
     return startExecuteRound(pid);
   } //its not started after unpaused, so run them in turns
   else {
-    let err = null;
     coloredLog(pid, "Running Genesis StartOnce...");
     const gasPrice = await getGasPrice(pid);
-    const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
-    await contracts[pid].methods
-      .genesisStartRound()
-      .send({ from: operatorAddress, gasPrice, nonce })
-      .catch((error) => {
-        err = error;
-        coloredLog(pid, error.message);
-        coloredLog(pid, "could not Genesis Start Round. exiting...");
-        return;
-      });
 
+    try {
+      const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
+      await contracts[pid].methods
+        .genesisStartRound()
+        .send({ from: operatorAddress, gasPrice, nonce });
 
-    if (err != null) {
+      coloredLog(
+        pid,
+        "GenesisStartOnce is complete, waiting for interval seconds"
+      );
+
+      await sleep(predictions[pid].interval * 1000 + 2000);
+
+      startExecuteRound(pid);
+    } catch (err) {
+      coloredLog(pid, error.message);
       coloredLog(pid, "could not start genesis, will retry");
+      
+      saveErrorData(pid, error, currentRoundNo, "genesisStart");
+
       await sleep(5000);
       return checkPredictionContract(pid);
     }
-
-    coloredLog(
-      pid,
-      "GenesisStartOnce is complete, waiting for interval seconds"
-    );
-
-    await sleep(predictions[pid].interval * 1000 + 2000);
-
-    startExecuteRound(pid);
   }
 };
 
@@ -475,5 +487,5 @@ module.exports = {
   successExecuteRound,
   restartOnMorning,
   checkPredictionContract,
-  getPredictionContract
+  getPredictionContract,
 };
