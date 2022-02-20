@@ -96,7 +96,7 @@ const getWeb3 = (pid) => {
   let web3;
   if (web3s[predictionData.network]) web3 = web3s[predictionData.network];
   else {
-    web3 = new Web3(config.networkSettings[predictionData.network].currentRpc);
+    web3 = new Web3(globalConfig.networkSettings[predictionData.network].currentRpc);
     web3s[predictionData.network] = web3;
   }
   return web3;
