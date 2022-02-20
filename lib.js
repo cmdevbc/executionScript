@@ -1,12 +1,14 @@
 const Web3 = require("web3");
 const Provider = require("@truffle/hdwallet-provider");
+const globalConfig = require("./globalConfig.js");
 const config = require("./config.js");
-const predictions = require("./predictions.js");
 const abi = require("./abi.json");
 var colors = require("colors/safe");
 const Moralis = require("moralis/node");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+const predictions = config.predictions;
 
 const privateKey = process.env.PRIVATE_KEY;
 let tempweb3 = new Web3("https://bsc-dataseed.binance.org");
@@ -19,8 +21,8 @@ const web3s = {};
 const priceCache = {};
 
 Moralis.start({
-  serverUrl: config.moralis.serverUrl,
-  appId: config.moralis.appId,
+  serverUrl: globalConfig.moralis.serverUrl,
+  appId: globalConfig.moralis.appId,
 });
 
 const coloredLog = (pid, ...txt) => {
@@ -34,11 +36,11 @@ const checkTime = () => {
   const minute = date.getMinutes();
   const day = date.getDay();
   if (day == 0 || day == 6) return false;
-  if (hour < config.stockHours.startHour || hour >= config.stockHours.endHour)
+  if (hour < globalConfig.stockHours.startHour || hour >= globalConfig.stockHours.endHour)
     return false;
   if (
-    hour == config.stockHours.startHour &&
-    minute < config.stockHours.startMin
+    hour == globalConfig.stockHours.startHour &&
+    minute < globalConfig.stockHours.startMin
   )
     return false;
   return true;
@@ -102,7 +104,7 @@ const getWeb3 = (pid) => {
 
 const getGasPrice = async (pid) => {
   const predictionData = predictions[pid];
-  const networkConfig = config.networkSettings[predictionData.network];
+  const networkConfig = globalConfig.networkSettings[predictionData.network];
   const fallbackGas = networkConfig.gasPrice;
   if (networkConfig.checkGas) {
     try {
@@ -294,8 +296,8 @@ const restartOnMorning = async (pid) => {
   var now = new Date();
 
   if (day > 0 && day < 5) {
-    if (hour > config.stockHours.endHour - 1) now.setDate(now.getDate() + 1);
-  } else if (day == 5 && hour > config.stockHours.endHour - 1)
+    if (hour > globalConfig.stockHours.endHour - 1) now.setDate(now.getDate() + 1);
+  } else if (day == 5 && hour > globalConfig.stockHours.endHour - 1)
     now.setDate(now.getDate() + 3);
   else if (day == 6) now.setDate(now.getDate() + 2);
   else if (day == 0) now.setDate(now.getDate() + 1);
@@ -380,7 +382,7 @@ const getPredictionContract = (pid) => {
   const predictionData = predictions[pid];
   const provider = new Provider(
     privateKey,
-    config.networkSettings[predictionData.network].currentRpc
+    globalConfig.networkSettings[predictionData.network].currentRpc
   );
   const web3 = new Web3(provider);
   const predictionContract = new web3.eth.Contract(abi, predictionData.address);
@@ -465,7 +467,7 @@ const checkPredictionContract = async (pid) => {
     } catch (err) {
       coloredLog(pid, error.message);
       coloredLog(pid, "could not start genesis, will retry");
-      
+
       saveErrorData(pid, error, currentRoundNo, "genesisStart");
 
       await sleep(5000);
