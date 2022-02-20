@@ -41,7 +41,7 @@ const config = {
             rpcOptions: ["https://matic-mumbai.chainstacklabs.com"],
             checkGas: false,
             gasApi: "https://gpoly.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
-            gasPrice: '2000000000'
+            gasPrice: '10000000000'
         },
     },
     stockHours: {
