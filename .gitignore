@@ -1,4 +1,5 @@
 /node_modules
-/roundData/*
+roundData/*
+!roundData/.gitkeep 
 .env
 config.js
