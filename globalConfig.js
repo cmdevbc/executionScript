@@ -50,8 +50,8 @@ const config = {
         endHour:20
     },
     moralis: {
-        serverUrl: "https://kp9ua1g8zbd9.usemoralis.com:2053/server",
-        appId: "BPgkCPegZMSEeoLwhpjxECOyD2Fg34ERQG34OOsB"
+        serverUrl: "https://k1hrjlf4rzgm.usemoralis.com:2053/server",
+        appId: "8gdNI2jhASctAwzA3OeUGrwx96fhDX18M5P7qNyy"
     }
 }
 
