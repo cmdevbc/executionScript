@@ -50,6 +50,33 @@ const checkTime = () => {
   return true;
 };
 
+const updatePriceCache = async (pid) => {
+  const predictionContract = getPredictionContract(pid);
+  const currentRoundNo = await predictionContract.methods.currentEpoch().call();
+  if (priceCache[pid] && priceCache[pid][currentRoundNo]) return;
+
+  let price;
+  let priceTimestamp;
+
+  coloredLog(pid, "getting price for round:" + currentRoundNo);
+  price = await getPrice(pid);
+  priceTimestamp = Date.now();
+  if (!priceCache[pid]) priceCache[pid] = {};
+  priceCache[pid][currentRoundNo] = price;
+  priceCache[pid]["timestamp" + currentRoundNo] = priceTimestamp;
+  savePriceDataToFile(pid, currentRoundNo, price, priceTimestamp);
+
+  coloredLog(
+    pid,
+    "got price " +
+      price.toString() +
+      " @ timestamp: " +
+      priceTimestamp +
+      " from api: " +
+      predictions[pid].apitype
+  );
+}
+
 const getPrice = (pid) => {
   const predictionData = predictions[pid];
 
@@ -195,6 +222,11 @@ const saveErrorData = async (pid, error, currentRoundNo, errorFunction) => {
 };
 
 const startExecuteRound = async (pid, data) => {
+
+  //get the price when 0.5 sec left to the end of the round
+  await updatePriceCache(pid);
+  await sleep(globalConfig.waitBeforeExecuting);
+
   const date = new Date(Date.now()).toLocaleString();
 
   if (predictions[pid].isStock && !checkTime()) {
@@ -211,27 +243,18 @@ const startExecuteRound = async (pid, data) => {
 
   const currentRoundNo = await predictionContract.methods.currentEpoch().call();
 
-  let price;
-  let priceTimestamp;
-
-  if (priceCache[pid] && priceCache[pid][currentRoundNo]) {
-    coloredLog(pid, "getting price from CACHE for round:" + currentRoundNo);
-    price = priceCache[pid][currentRoundNo];
-    priceTimestamp = priceCache[pid]["timestamp" + currentRoundNo];
-  } else {
-    coloredLog(pid, "getting price for round:" + currentRoundNo);
-    price = await getPrice(pid);
-    priceTimestamp = Date.now();
-    if (!priceCache[pid]) priceCache[pid] = {};
-    priceCache[pid][currentRoundNo] = price;
-    priceCache[pid]["timestamp" + currentRoundNo] = priceTimestamp;
-
-    savePriceDataToFile(pid, currentRoundNo, price, priceTimestamp);
+  if (!priceCache[pid] || !priceCache[pid][currentRoundNo]){
+    await updatePriceCache(pid);
   }
+
+  let price = priceCache[pid][currentRoundNo];
+  let priceTimestamp = priceCache[pid]["timestamp" + currentRoundNo];
 
   coloredLog(
     pid,
-    "got price " +
+    "round: " +
+    currentRoundNo +
+    " , got price FROM CACHE " +
       price.toString() +
       " @ timestamp: " +
       priceTimestamp +
@@ -246,7 +269,7 @@ const startExecuteRound = async (pid, data) => {
       .send({ from: operatorAddress, gasPrice, nonce });
 
     if (receipt) {
-      coloredLog(pid, `: Transaction hash: ${receipt.transactionHash}`);
+      coloredLog(pid, `Transaction hash: ${receipt.transactionHash}`);
 
       try {
         const ExecutionPrice = Moralis.Object.extend("ExecutionPrice");
@@ -281,7 +304,7 @@ const startExecuteRound = async (pid, data) => {
 };
 
 const successExecuteRound = async (pid) => {
-  await sleep(predictions[pid].interval * 1000 + 2000);
+  await sleep(predictions[pid].interval * 1000 + globalConfig.getPriceTimerOffset);
   startExecuteRound(pid);
 };
 
@@ -467,7 +490,7 @@ const checkPredictionContract = async (pid) => {
       "contract is already active so running after ms: " + msecondsLeft
     );
 
-    if (msecondsLeft > 0) await sleep(msecondsLeft + 2000);
+    if (msecondsLeft > 0) await sleep(msecondsLeft + globalConfig.getPriceTimerOffset);
 
     return startExecuteRound(pid);
   } //its not started after unpaused, so run them in turns
@@ -486,7 +509,7 @@ const checkPredictionContract = async (pid) => {
         "GenesisStartOnce is complete, waiting for interval seconds"
       );
 
-      await sleep(predictions[pid].interval * 1000 + 2000);
+      await sleep(predictions[pid].interval * 1000 + globalConfig.getPriceTimerOffset);
 
       startExecuteRound(pid);
     } catch (err) {
