@@ -20,6 +20,7 @@ const operatorAddress = operator.address;
 const contracts = {};
 const web3s = {};
 const priceCache = {};
+const rpcCache = {};
 
 Moralis.start({
   serverUrl: globalConfig.moralis.serverUrl,
@@ -128,7 +129,7 @@ const getWeb3 = (pid) => {
   if (web3s[predictionData.network]) web3 = web3s[predictionData.network];
   else {
     web3 = new Web3(
-      globalConfig.networkSettings[predictionData.network].currentRpc
+      rpcCache[predictionData.network].currentRpc
     );
     web3s[predictionData.network] = web3;
   }
@@ -338,9 +339,8 @@ const restartOnMorning = async (pid) => {
   checkPredictionContract(pid);
 };
 
-const tryRpc = async (data, i) => {
+const tryRpc = async (rpcToUse) => {
   return new Promise(async (resolve, reject) => {
-    let rpcToUse = data.rpcOptions[i];
     let web3;
 
     console.log("trying RPC", rpcToUse);
@@ -359,17 +359,21 @@ const tryRpc = async (data, i) => {
   });
 };
 
-const chooseRpc = async (data) => {
-  if (!data.rpcOptions || data.rpcOptions.length == 0) return;
-  data.updatingRpc = true;
+const chooseRpc = async (network) => {
+  if(!rpcCache[network]){
+    rpcCache[network] = {currentRpc:null, updatingRpc:false};
+  }
+  const networkSettings = globalConfig.networkSettings[network];
+
+  rpcCache[network].updatingRpc = true;
   let rpcNum = 0;
-  await tryRpc(data, 0).then(async (result) => {
+  await tryRpc(networkSettings.rpcOptions[0]).then(async (result) => {
     if (result) rpcNum = 0;
     else {
-      await tryRpc(data, 1).then(async (result) => {
+      await tryRpc(networkSettings.rpcOptions[1]).then(async (result) => {
         if (result) rpcNum = 1;
         else {
-          await tryRpc(data, 2).then(async (result) => {
+          await tryRpc(networkSettings.rpcOptions[2]).then(async (result) => {
             if (result) rpcNum = 2;
           });
         }
@@ -377,26 +381,10 @@ const chooseRpc = async (data) => {
     }
   });
 
-  const rpcToUse = data.rpcOptions[rpcNum];
-  console.log("selected rpc", data.rpcOptions[rpcNum]);
-
-  if (data.currentRpc != rpcToUse) {
-    data.currentRpc = rpcToUse;
-    const provider = new Provider(data.privateKey, rpcToUse);
-    const web3 = new Web3(provider);
-
-    for (let i = 0; i < data.predictions.length; i++) {
-      const pid = data.predictions[i];
-
-      const predictionContract = new web3.eth.Contract(abi, predictionAddress);
-      data.predictionData[pid] = {
-        contract: predictionContract,
-        address: predictionAddress,
-      };
-    }
-  } else console.log("same rpc - no update", rpcToUse);
-
-  data.updatingRpc = false;
+  const rpcToUse = networkSettings.rpcOptions[rpcNum];
+  console.log("selected rpc", networkSettings.rpcOptions[rpcNum]);
+  rpcCache[network].currentRpc = rpcToUse;
+  rpcCache[network].updatingRpc = false;
 };
 
 const getPredictionContract = (pid) => {
@@ -404,7 +392,7 @@ const getPredictionContract = (pid) => {
   const predictionData = predictions[pid];
   const provider = new Provider(
     privateKey,
-    globalConfig.networkSettings[predictionData.network].currentRpc
+    rpcCache[predictionData.network].currentRpc
   );
   const web3 = new Web3(provider);
   const predictionContract = new web3.eth.Contract(abi, predictionData.address);
@@ -435,8 +423,8 @@ const loadPriceDataToCache = (pid, currentRoundNo) => {
 }
 
 const checkPredictionContract = async (pid) => {
-  //const network =  predictions[pid].network;
-  //if(!globalConfig.networkSettings[network].updatingRpc) await chooseRpc(pid);
+  const network =  predictions[pid].network;
+  if(!rpcCache[network] || !rpcCache[network].updatingRpc) await chooseRpc(network);
 
   const predictionContract = getPredictionContract(pid);
 
