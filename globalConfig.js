@@ -6,8 +6,6 @@ const config = {
         BSC: {
             gasLevel:'SafeGasPrice',
             gasOffset:0.1,
-            updatingRpc: false,
-            currentRpc: 'https://bsc-dataseed3.defibit.io',
             rpcOptions: ["https://bsc-dataseed3.defibit.io", 'https://bsc-dataseed.binance.org', 'https://bsc-dataseed4.binance.org'],
             checkGas: true,
             gasApi: "https://gbsc.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
@@ -15,19 +13,15 @@ const config = {
         },
         POLYGON: {
             gasLevel:'ProposeGasPrice',
-            gasOffset:10,
-            updatingRpc: false,
-            currentRpc: 'https://polygon-rpc.com/',
-            rpcOptions: ["https://polygon-rpc.com/"],
-            checkGas: false,
+            gasOffset:1,
+            rpcOptions: ["https://polygon-rpc.com/", "https://speedy-nodes-nyc.moralis.io/38d762dc7ea8dc00bd74ca7a/polygon/mainnet", "https://matic-mainnet.chainstacklabs.com"],
+            checkGas: true,
             gasApi: "https://gpoly.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
-            gasPrice: '100000000000'
+            gasPrice: '45000000000'
         },
         BSCTEST: {
             gasLevel:'SafeGasPrice',
             gasOffset:1,
-            updatingRpc: false,
-            currentRpc: 'https://speedy-nodes-nyc.moralis.io/1d0a9164468a9049fed45295/bsc/testnet',
             rpcOptions: ["https://speedy-nodes-nyc.moralis.io/1d0a9164468a9049fed45295/bsc/testnet", 'https://data-seed-prebsc-1-s1.binance.org:8545/'],
             checkGas: false,
             gasApi: "https://gbsc.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
@@ -36,8 +30,6 @@ const config = {
         POLYGONTEST: {
             gasLevel:'ProposeGasPrice',
             gasOffset:10,
-            updatingRpc: false,
-            currentRpc: 'https://matic-mumbai.chainstacklabs.com',
             rpcOptions: ["https://matic-mumbai.chainstacklabs.com"],
             checkGas: false,
             gasApi: "https://gpoly.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
