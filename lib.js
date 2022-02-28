@@ -249,6 +249,12 @@ const startExecuteRound = async (pid, data) => {
   }
 
   let price = priceCache[pid][currentRoundNo];
+
+  //restart if still couldnt get the price
+  if(!price){
+    return checkPredictionContract(pid);
+  }
+
   let priceTimestamp = priceCache[pid]["timestamp" + currentRoundNo];
 
   coloredLog(
