@@ -14,7 +14,7 @@ const config = {
         POLYGON: {
             gasLevel:'ProposeGasPrice',
             gasOffset:10,
-            rpcOptions: ["https://polygon-rpc.com/", "https://speedy-nodes-nyc.moralis.io/38d762dc7ea8dc00bd74ca7a/polygon/mainnet", "https://matic-mainnet.chainstacklabs.com"],
+            rpcOptions: ["https://speedy-nodes-nyc.moralis.io/38d762dc7ea8dc00bd74ca7a/polygon/mainnet", "https://polygon-rpc.com/", "https://matic-mainnet.chainstacklabs.com"],
             checkGas: true,
             gasApi: "https://gpoly.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
             gasPrice: '45000000000'
