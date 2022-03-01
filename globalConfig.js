@@ -46,7 +46,7 @@ const config = {
         appId: "8gdNI2jhASctAwzA3OeUGrwx96fhDX18M5P7qNyy"
     },
     getPriceTimerOffset: -500,
-    waitBeforeExecuting: 2500
+    waitBeforeExecuting: 5000
 }
 
 module.exports = config

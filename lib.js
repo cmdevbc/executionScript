@@ -505,7 +505,7 @@ const checkPredictionContract = async (pid) => {
 
       await sleep(predictions[pid].interval * 1000 + globalConfig.getPriceTimerOffset);
 
-      startExecuteRound(pid);
+      return startExecuteRound(pid);
     } catch (error) {
       coloredLog(pid, error.message);
       coloredLog(pid, "could not start genesis, will retry");
