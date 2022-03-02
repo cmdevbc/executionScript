@@ -21,6 +21,7 @@ const contracts = {};
 const web3s = {};
 const priceCache = {};
 const rpcCache = {};
+const timerSyncCache = {};
 
 Moralis.start({
   serverUrl: globalConfig.moralis.serverUrl,
@@ -125,6 +126,7 @@ const getPriceKUCOIN = async (code) => {
 
 const getWeb3 = (pid) => {
   const predictionData = predictions[pid];
+
   let web3;
   if (web3s[predictionData.network]) web3 = web3s[predictionData.network];
   else {
@@ -222,19 +224,18 @@ const saveErrorData = async (pid, error, currentRoundNo, errorFunction) => {
   }
 };
 
-const startExecuteRound = async (pid, data) => {
-
-  //get the price when 0.5 sec left to the end of the round
-  await updatePriceCache(pid);
-  await sleep(globalConfig.waitBeforeExecuting);
-
+const startExecuteRound = async (pid) => {
   const date = new Date(Date.now()).toLocaleString();
 
   if (predictions[pid].isStock && !checkTime()) {
     coloredLog(pid, "(exrnd) stock time is over so pausing @  " + date);
     await pause(pid);
-    return restartOnMorning(pid, data);
+    return restartOnMorning(pid);
   }
+
+  //get the price when 0.5 sec left to the end of the round
+  await updatePriceCache(pid);
+  await sleep(globalConfig.waitBeforeExecuting);
 
   coloredLog(pid, "calling executeRound @  " + date);
   const gasPrice = await getGasPrice(pid);
@@ -302,6 +303,7 @@ const startExecuteRound = async (pid, data) => {
     if (error.message.includes(">buffer")) {
       coloredLog(pid, "round ending timer passed, need to pause/unpause..");
       await pause(pid);
+      await sleep(2000);
       return checkPredictionContract(pid);
     } else {
       coloredLog(pid, "" + error.message);
@@ -471,11 +473,24 @@ const checkPredictionContract = async (pid) => {
       .call();
 
     const blockNumber = await getWeb3(pid).eth.getBlockNumber();
-    const block = await getWeb3(pid).eth.getBlock(blockNumber);
-    let timestamp;
+    let block;
 
+    try{
+      block = await getWeb3(pid).eth.getBlock(blockNumber);
+      console.log('cem blocktimestamp', block.timestamp)
+      timerSyncCache[network] = block.timestamp * 1000 - Date.now();
+    }
+    catch(err){
+      console.log(err.message)
+    }
+
+    let timestamp;
+  
     if (block) timestamp = block.timestamp * 1000;
-    else timestamp = Date.now();
+    else {
+      const sync = timerSyncCache[network] ? timerSyncCache[network] : 0;
+      timestamp = Date.now() + sync;
+    }
 
     const msecondsLeft = 1000 * roundData.lockTimestamp - timestamp;
 
@@ -483,6 +498,8 @@ const checkPredictionContract = async (pid) => {
       pid,
       "contract is already active so running after ms: " + msecondsLeft
     );
+
+    return;
 
     if (msecondsLeft > 0) await sleep(msecondsLeft + globalConfig.getPriceTimerOffset);
 
