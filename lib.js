@@ -499,8 +499,6 @@ const checkPredictionContract = async (pid) => {
       "contract is already active so running after ms: " + msecondsLeft
     );
 
-    return;
-
     if (msecondsLeft > 0) await sleep(msecondsLeft + globalConfig.getPriceTimerOffset);
 
     return startExecuteRound(pid);
