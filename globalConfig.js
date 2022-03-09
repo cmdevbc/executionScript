@@ -45,8 +45,7 @@ const config = {
         serverUrl: "https://k1hrjlf4rzgm.usemoralis.com:2053/server",
         appId: "8gdNI2jhASctAwzA3OeUGrwx96fhDX18M5P7qNyy"
     },
-    getPriceTimerOffset: -500,
-    waitBeforeExecuting: 5000
+    executeTimerOffset: 1000
 }
 
 module.exports = config

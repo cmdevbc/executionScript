@@ -23,6 +23,8 @@ const priceCache = {};
 const rpcCache = {};
 const timerSyncCache = {};
 
+const priceData = {};
+
 Moralis.start({
   serverUrl: globalConfig.moralis.serverUrl,
   appId: globalConfig.moralis.appId,
@@ -233,30 +235,90 @@ const startExecuteRound = async (pid) => {
     return restartOnMorning(pid);
   }
 
-  //get the price when 0.5 sec left to the end of the round
-  await updatePriceCache(pid);
-  await sleep(globalConfig.waitBeforeExecuting);
-
-  coloredLog(pid, "calling executeRound @  " + date);
-  const gasPrice = await getGasPrice(pid);
-  coloredLog(pid, "using gasPrice: " + gasPrice);
-
   const predictionContract = getPredictionContract(pid);
-
   const currentRoundNo = await predictionContract.methods.currentEpoch().call();
 
-  if (!priceCache[pid] || !priceCache[pid][currentRoundNo]){
-    await updatePriceCache(pid);
-  }
+  let price;
+  let priceTimestamp;
+  let diffTimestamp;
 
-  let price = priceCache[pid][currentRoundNo];
+  const timestampData = await predictionContract.methods.timestamps(currentRoundNo - 1).call();
+  const closeTimestamp = parseInt(timestampData.closeTimestamp) * 1000;
+
+  if(predictions[pid].apitype == 'KUCOIN'){
+
+    coloredLog(pid, "prediction closeTimestamp  " + closeTimestamp);
+
+    getPriceDataFromFile(pid);
+
+
+    //
+    /*
+      scenarios:
+      price array is empty
+        get currentPrice, [restart priceSaver for future rounds] 
+
+      price[0] is after closeTimestamp
+        price[x] is before closeTimestamp  --- works great
+        price[x] is after closeTimestamp ---- works moderate, better than using current price
+      
+      price[0] is before closeTimestamp --- have problem
+        use currentPrice vs use price[0]
+    */
+    //
+
+    const prices = priceData[predictions[pid].title];
+    let diff;
+
+    for(let i = 0; i < prices.length; i++){
+      diff = closeTimestamp - prices[i].timestamp;
+      if(prices[i].timestamp <= closeTimestamp){
+        let targetIndex = i;
+        const diffTemp = closeTimestamp - prices[i].timestamp;
+        if(i > 0 && diff < diffTemp){
+          targetIndex--;
+          console.log('cem previous TS is closer @ index: '+i);
+        }
+        price = prices[targetIndex].price;
+        priceTimestamp = prices[targetIndex].timestamp;
+        diffTimestamp = closeTimestamp - priceTimestamp;
+        console.log('cem FOUND price to use @ index: '+i, prices[targetIndex]);
+        console.log('cem TS DIFF', closeTimestamp - prices[targetIndex].timestamp);
+        break;
+      }
+    }
+
+    if(!price){
+      priceTimestamp = prices[prices.length - 1].timestamp;
+      if(prices.length > 0 && priceTimestamp){
+        price = prices[prices.length - 1].price;
+        diffTimestamp = closeTimestamp - priceTimestamp;
+        console.log('cem TS DIFF', diffTimestamp);
+      }
+      else{
+        //fetch new price, restart priceSaver script
+        console.log('cem getting current price', prices[i]);
+        price = await getPrice(pid);
+        priceTimestamp = Date.now();
+      }
+    }
+  }
+  else{
+    await updatePriceCache(pid);
+
+    if (!priceCache[pid] || !priceCache[pid][currentRoundNo]){
+      await updatePriceCache(pid);
+    }
+
+    price = priceCache[pid][currentRoundNo];
+    priceTimestamp = priceCache[pid]["timestamp" + currentRoundNo];
+    diffTimestamp = closeTimestamp - priceTimestamp;
+  }
 
   //restart if still couldnt get the price
   if(!price){
     return checkPredictionContract(pid);
   }
-
-  let priceTimestamp = priceCache[pid]["timestamp" + currentRoundNo];
 
   coloredLog(
     pid,
@@ -269,6 +331,10 @@ const startExecuteRound = async (pid) => {
       " from api: " +
       predictions[pid].apitype
   );
+
+  coloredLog(pid, "calling executeRound @  " + date);
+  const gasPrice = await getGasPrice(pid);
+  coloredLog(pid, "using gasPrice: " + gasPrice);
 
   try {
     const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
@@ -287,9 +353,17 @@ const startExecuteRound = async (pid) => {
         executionPrice.set("network", predictions[pid].network);
         executionPrice.set("price", price.toString());
         executionPrice.set("timestamp", priceTimestamp);
+        executionPrice.set("closeTimestamp", closeTimestamp);
+        executionPrice.set("diffTimestamp", diffTimestamp);
         executionPrice.set("api", predictions[pid].apitype);
+
+        if(priceData[predictions[pid].title] && (diffTimestamp > 20000 || diffTimestamp < -20000)){
+          executionPrice.set("allPriceData",  JSON.stringify(priceData[predictions[pid].title]));
+        }
+
         executionPrice.save();
       } catch (err) {
+        console.log(err.message);
         coloredLog(pid, "Couldnt save price information to Moralis");
       }
 
@@ -313,7 +387,7 @@ const startExecuteRound = async (pid) => {
 };
 
 const successExecuteRound = async (pid) => {
-  await sleep(predictions[pid].interval * 1000 + globalConfig.getPriceTimerOffset);
+  await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset);
   startExecuteRound(pid);
 };
 
@@ -430,6 +504,19 @@ const loadPriceDataToCache = (pid, currentRoundNo) => {
   }
 }
 
+const getPriceDataFromFile = (pid) => {
+    const prediction = predictions[pid];
+    const fileName = './roundData/'+ prediction.network + '_' + prediction.title + '_prices.json';
+    if (!fs.existsSync(fileName)) {
+      fs.writeFileSync(fileName, JSON.stringify([]));
+      priceData[prediction.title] = []
+    }
+    else {
+      let rawdata = fs.readFileSync(fileName);
+      priceData[prediction.title] = JSON.parse(rawdata);  
+    }
+}
+
 const checkPredictionContract = async (pid) => {
   const network =  predictions[pid].network;
   if(!rpcCache[network] || !rpcCache[network].updatingRpc) await chooseRpc(network);
@@ -442,7 +529,10 @@ const checkPredictionContract = async (pid) => {
   .currentEpoch()
   .call();
 
-  loadPriceDataToCache(pid, currentRoundNo);
+  if(predictions[pid].apitype == 'KUCOIN')
+    getPriceDataFromFile(pid);
+  else
+    loadPriceDataToCache(pid, currentRoundNo);
 
   const isPaused = await predictionContract.methods.paused().call();
 
@@ -477,7 +567,6 @@ const checkPredictionContract = async (pid) => {
 
     try{
       block = await getWeb3(pid).eth.getBlock(blockNumber);
-      console.log('cem blocktimestamp', block.timestamp)
       timerSyncCache[network] = block.timestamp * 1000 - Date.now();
     }
     catch(err){
@@ -499,7 +588,17 @@ const checkPredictionContract = async (pid) => {
       "contract is already active so running after ms: " + msecondsLeft
     );
 
-    if (msecondsLeft > 0) await sleep(msecondsLeft + globalConfig.getPriceTimerOffset);
+
+    if(msecondsLeft <= predictions[pid].interval * -1000){
+      coloredLog(pid, "round ending timer passed, need to pause/unpause..");
+      await pause(pid);
+      await sleep(2000);
+      return checkPredictionContract(pid);
+    } 
+
+
+
+    if (msecondsLeft > 0) await sleep(msecondsLeft + globalConfig.executeTimerOffset);
 
     return startExecuteRound(pid);
   } //its not started after unpaused, so run them in turns
@@ -518,7 +617,7 @@ const checkPredictionContract = async (pid) => {
         "GenesisStartOnce is complete, waiting for interval seconds"
       );
 
-      await sleep(predictions[pid].interval * 1000 + globalConfig.getPriceTimerOffset);
+      await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset);
 
       return startExecuteRound(pid);
     } catch (error) {
@@ -541,6 +640,7 @@ module.exports = {
   sleep,
   pause,
   unpause,
+  getWeb3,
   startExecuteRound,
   successExecuteRound,
   restartOnMorning,

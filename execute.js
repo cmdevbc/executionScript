@@ -1,12 +1,16 @@
 var shell = require('shelljs');
 const config = require('./config.js');
 require('dotenv').config()
-const { sleep, checkPredictionContract, pause, getPredictionContract } = require("./lib.js");
+const { sleep, checkPredictionContract, pause, getPredictionContract, chooseRpc } = require("./lib.js");
 
 const runOnStart = async () => {
+
+  shell.exec('pm2 restart priceSaver');
+
     for (let i = 0; i < config.predictions.length; i++) {
 
       if(config.predictions[i].keepPaused){
+        await chooseRpc(config.predictions[i].network);
         const predictionContract = getPredictionContract(i);
         const isPaused = await predictionContract.methods.paused().call();
         if(!isPaused) pause(i);
