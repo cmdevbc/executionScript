@@ -8,7 +8,7 @@ const fetch = (...args) =>
 
 const priceData = {};
 
-const priceArrLength = 120;
+const priceArrLength = 600;
 
 const getFileName = (prediction) => {
     return './roundData/'+ prediction.network + '_' + prediction.title + '_prices.json';

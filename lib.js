@@ -1,5 +1,6 @@
 const Web3 = require("web3");
 const fs = require('fs');
+var shell = require('shelljs');
 const Provider = require("@truffle/hdwallet-provider");
 const globalConfig = require("./globalConfig.js");
 const config = require("./config.js");
@@ -251,57 +252,60 @@ const startExecuteRound = async (pid) => {
 
     getPriceDataFromFile(pid);
 
-
-    //
-    /*
-      scenarios:
-      price array is empty
-        get currentPrice, [restart priceSaver for future rounds] 
-
-      price[0] is after closeTimestamp
-        price[x] is before closeTimestamp  --- works great
-        price[x] is after closeTimestamp ---- works moderate, better than using current price
-      
-      price[0] is before closeTimestamp --- have problem
-        use currentPrice vs use price[0]
-    */
-    //
-
     const prices = priceData[predictions[pid].title];
     let diff;
 
-    for(let i = 0; i < prices.length; i++){
-      diff = closeTimestamp - prices[i].timestamp;
-      if(prices[i].timestamp <= closeTimestamp){
-        let targetIndex = i;
-        const diffTemp = closeTimestamp - prices[i].timestamp;
-        if(i > 0 && diff < diffTemp){
-          targetIndex--;
-          console.log('cem previous TS is closer @ index: '+i);
+    //scenarios:
+    
+    //price array is empty, or the price is old, get currentPrice, [restart priceSaver for future rounds] 
+    if(prices.length === 0 || prices[0].timestamp <= closeTimestamp){
+      price = await getPrice(pid);
+      priceTimestamp = Date.now();
+      diffTimestamp = closeTimestamp - priceTimestamp;
+      shell.exec('pm2 restart priceSaver');
+    }
+    //if the round executes late, use the earliest price available
+    else if(prices[prices.length - 1].timestamp >= closeTimestamp) {
+      price = prices[prices.length - 1].price;
+      priceTimestamp = prices[prices.length - 1].timestamp;
+      diffTimestamp = closeTimestamp - priceTimestamp;
+      console.log('cem TS DIFF', diffTimestamp);
+    }
+    //loop through price data to get the price closest to the closingTimestamp
+    else {
+      for(let i = 0; i < prices.length; i++){
+        diff = closeTimestamp - prices[i].timestamp;
+        if(prices[i].timestamp <= closeTimestamp){
+          let targetIndex = i;
+          const diffTemp = closeTimestamp - prices[i].timestamp;
+          if(i > 0 && diff < diffTemp){
+            targetIndex--;
+            console.log('cem previous TS is closer @ index: '+i);
+          }
+          price = prices[targetIndex].price;
+          priceTimestamp = prices[targetIndex].timestamp;
+          diffTimestamp = closeTimestamp - priceTimestamp;
+          console.log('cem FOUND price to use @ index: '+i, prices[targetIndex]);
+          console.log('cem TS DIFF', closeTimestamp - prices[targetIndex].timestamp);
+          break;
         }
-        price = prices[targetIndex].price;
-        priceTimestamp = prices[targetIndex].timestamp;
-        diffTimestamp = closeTimestamp - priceTimestamp;
-        console.log('cem FOUND price to use @ index: '+i, prices[targetIndex]);
-        console.log('cem TS DIFF', closeTimestamp - prices[targetIndex].timestamp);
-        break;
       }
     }
 
-    if(!price){
-      priceTimestamp = prices[prices.length - 1].timestamp;
-      if(prices.length > 0 && priceTimestamp){
-        price = prices[prices.length - 1].price;
-        diffTimestamp = closeTimestamp - priceTimestamp;
-        console.log('cem TS DIFF', diffTimestamp);
-      }
-      else{
-        //fetch new price, restart priceSaver script
-        console.log('cem getting current price', prices[i]);
-        price = await getPrice(pid);
-        priceTimestamp = Date.now();
-      }
-    }
+    // if(!price){
+    //   priceTimestamp = prices[prices.length - 1].timestamp;
+    //   if(prices.length > 0 && priceTimestamp){
+    //     price = prices[prices.length - 1].price;
+    //     diffTimestamp = closeTimestamp - priceTimestamp;
+    //     console.log('cem TS DIFF', diffTimestamp);
+    //   }
+    //   else{
+    //     //fetch new price, restart priceSaver script
+    //     console.log('cem getting current price', prices[i]);
+    //     price = await getPrice(pid);
+    //     priceTimestamp = Date.now();
+    //   }
+    // }
   }
   else{
     await updatePriceCache(pid);
