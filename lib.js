@@ -278,8 +278,9 @@ const startExecuteRound = async (pid) => {
         if(prices[i].timestamp <= closeTimestamp){
           let targetIndex = i;
           if(i > 0) {
-            const diffTemp = closeTimestamp - prices[i-1].timestamp;
-            if(diff < diffTemp){
+            const diffTemp = prices[i-1].timestamp - closeTimestamp;
+            console.log('diff , diffAfterCT :', diff, diffTemp);
+            if(diffTemp < diff){
               targetIndex--;
               console.log('cem previous TS is closer @ index: '+i);
             }
