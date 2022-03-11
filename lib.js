@@ -1,4 +1,7 @@
 const Web3 = require("web3");
+const { ethers } = require("ethers");
+const { JsonRpcProvider } = require("@ethersproject/providers");
+const { Wallet } = require("@ethersproject/wallet");
 const fs = require('fs');
 var shell = require('shelljs');
 const Provider = require("@truffle/hdwallet-provider");
@@ -19,6 +22,7 @@ const operator = tempweb3.eth.accounts.privateKeyToAccount(
 );
 const operatorAddress = operator.address;
 const contracts = {};
+const signers = {};
 const web3s = {};
 const priceCache = {};
 const rpcCache = {};
@@ -57,7 +61,7 @@ const checkTime = () => {
 
 const updatePriceCache = async (pid) => {
   const predictionContract = getPredictionContract(pid);
-  const currentRoundNo = await predictionContract.methods.currentEpoch().call();
+  const currentRoundNo = await predictionContract.currentEpoch();
   if (priceCache[pid] && priceCache[pid][currentRoundNo]) return;
 
   let price;
@@ -177,9 +181,8 @@ const pause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
-    await predictionContract.methods
-      .pause()
-      .send({ from: operatorAddress, gasPrice });
+    await predictionContract
+      .pause({ from: operatorAddress, gasPrice });
 
     coloredLog(pid, "paused");
     return;
@@ -196,9 +199,8 @@ const unpause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
-    await predictionContract.methods
-      .unpause()
-      .send({ from: operatorAddress, gasPrice });
+    await predictionContract
+      .unpause({ from: operatorAddress, gasPrice });
 
     coloredLog(pid, "unpaused");
 
@@ -237,13 +239,13 @@ const startExecuteRound = async (pid) => {
   }
 
   const predictionContract = getPredictionContract(pid);
-  const currentRoundNo = await predictionContract.methods.currentEpoch().call();
+  const currentRoundNo = await predictionContract.currentEpoch();
 
   let price;
   let priceTimestamp;
   let diffTimestamp;
 
-  const timestampData = await predictionContract.methods.timestamps(currentRoundNo - 1).call();
+  const timestampData = await predictionContract.timestamps(currentRoundNo - 1);
   const closeTimestamp = parseInt(timestampData.closeTimestamp) * 1000;
 
   if(predictions[pid].apitype == 'KUCOIN'){
@@ -344,13 +346,11 @@ const startExecuteRound = async (pid) => {
   coloredLog(pid, "using gasPrice: " + gasPrice);
 
   try {
-    const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
-    const receipt = await predictionContract.methods
-      .executeRound(price.toString())
-      .send({ from: operatorAddress, gasPrice, nonce });
+    const receipt = await predictionContract
+      .executeRound(price.toString(), { from: operatorAddress, gasPrice });
 
     if (receipt) {
-      coloredLog(pid, `Transaction hash: ${receipt.transactionHash}`);
+      coloredLog(pid, `Transaction hash: ${receipt.hash}`);
 
       try {
         const ExecutionPrice = Moralis.Object.extend("ExecutionPrice");
@@ -479,12 +479,16 @@ const chooseRpc = async (network) => {
 const getPredictionContract = (pid) => {
   if (contracts[pid]) return contracts[pid];
   const predictionData = predictions[pid];
-  const provider = new Provider(
-    privateKey,
-    rpcCache[predictionData.network].currentRpc
-  );
-  const web3 = new Web3(provider);
-  const predictionContract = new web3.eth.Contract(abi, predictionData.address);
+
+  const provider = new JsonRpcProvider(rpcCache[predictionData.network].currentRpc);
+  const signer = new Wallet(privateKey, provider);
+  const predictionContract = new ethers.Contract(predictionData.address, abi, signer);
+  // const provider = new Provider(
+  //   privateKey,
+  //   rpcCache[predictionData.network].currentRpc
+  // );
+  //const web3 = new Web3(provider);
+  //const predictionContract = new web3.eth.Contract(abi, predictionData.address);
   contracts[pid] = predictionContract;
   return predictionContract;
 };
@@ -532,16 +536,14 @@ const checkPredictionContract = async (pid) => {
 
   coloredLog(pid, "Prediction check started...");
 
-  const currentRoundNo = await predictionContract.methods
-  .currentEpoch()
-  .call();
+  const currentRoundNo = await predictionContract.currentEpoch();
 
   if(predictions[pid].apitype == 'KUCOIN')
     getPriceDataFromFile(pid);
   else
     loadPriceDataToCache(pid, currentRoundNo);
 
-  const isPaused = await predictionContract.methods.paused().call();
+  const isPaused = await predictionContract.paused();
 
   if (predictions[pid].isStock && !checkTime()) {
     coloredLog(pid, "market is off, so wait for morning");
@@ -559,15 +561,15 @@ const checkPredictionContract = async (pid) => {
     return unpause(pid);
   }
 
-  const genesisStartOnce = await predictionContract.methods
+  const genesisStartOnce = await predictionContract
     .genesisStartOnce()
-    .call();
+    ;
 
   //its already running. get seconds left and run
   if (genesisStartOnce) {
-    const roundData = await predictionContract.methods
+    const roundData = await predictionContract
       .timestamps(currentRoundNo)
-      .call();
+      ;
 
     const blockNumber = await getWeb3(pid).eth.getBlockNumber();
     let block;
@@ -614,10 +616,8 @@ const checkPredictionContract = async (pid) => {
     const gasPrice = await getGasPrice(pid);
 
     try {
-      const nonce = await getWeb3(pid).eth.getTransactionCount(operatorAddress);
-      await contracts[pid].methods
-        .genesisStartRound()
-        .send({ from: operatorAddress, gasPrice, nonce });
+      await contracts[pid]
+        .genesisStartRound({ from: operatorAddress, gasPrice });
 
       coloredLog(
         pid,

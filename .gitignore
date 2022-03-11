@@ -4,3 +4,5 @@ roundData/*
 !roundData/.gitkeep 
 .env
 config.js
+executeTestBSC.js
+executeTestPOLYGON.js
