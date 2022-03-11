@@ -38,7 +38,7 @@ const loadPriceDataToCache = (pid) => {
     }
     else {
       let rawdata = fs.readFileSync(fileName);
-      rawdata = rawdata ? rawdata : [];
+      rawdata = rawdata ? rawdata : "[]";
       priceData[prediction.title] = JSON.parse(rawdata);  
     }
   }
