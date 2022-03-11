@@ -524,7 +524,7 @@ const getPriceDataFromFile = (pid) => {
     }
     else {
       let rawdata = fs.readFileSync(fileName);
-      rawdata = rawdata ? rawdata : "[]";
+      rawdata = rawdata.length > 0 ? rawdata : "[]";
       priceData[prediction.title] = JSON.parse(rawdata);  
     }
 }
