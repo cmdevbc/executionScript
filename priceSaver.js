@@ -46,19 +46,24 @@ const savePrice = async () => {
   for (let i = 0; i < config.predictions.length; i++) {
     const prediction = config.predictions[i];
 
-    if(!priceData[prediction.title]){
-        loadPriceDataToCache(i);
-    }
+    if(prediction.apitype == 'KUCOIN'){
 
-    if (!prediction.keepPaused) {
-      const data = await getPriceKUCOIN(prediction.apicode);
-      if (data) {
-        const fileName = getFileName(prediction);
+      if(!priceData[prediction.title]){
+          loadPriceDataToCache(i);
+      }
 
-        priceData[prediction.title].unshift(data);
-        if (priceData[prediction.title].length > priceArrLength) priceData[prediction.title].pop();
+      if (!prediction.keepPaused) {
+        const data = await getPriceKUCOIN(prediction.apicode);
+        if (data) {
+          const fileName = getFileName(prediction);
 
-        fs.writeFileSync(fileName, JSON.stringify(priceData[prediction.title]));
+          priceData[prediction.title].unshift(data);
+          if (priceData[prediction.title].length > priceArrLength) priceData[prediction.title].pop();
+
+          fs.writeFileSync(fileName, JSON.stringify(priceData[prediction.title]));
+
+          console.log('saving price for ', prediction.title, data);
+        }
       }
     }
   }
