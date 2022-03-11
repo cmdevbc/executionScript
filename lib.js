@@ -16,11 +16,11 @@ const fetch = (...args) =>
 const predictions = config.predictions;
 
 const privateKey = process.env.PRIVATE_KEY;
-let tempweb3 = new Web3("https://bsc-dataseed.binance.org");
-const operator = tempweb3.eth.accounts.privateKeyToAccount(
-  process.env.PRIVATE_KEY
-);
-const operatorAddress = operator.address;
+
+const provider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
+const signer = new Wallet(privateKey, provider);
+const operatorAddress = signer.address;
+
 const contracts = {};
 const signers = {};
 const web3s = {};
@@ -562,33 +562,44 @@ const checkPredictionContract = async (pid) => {
   }
 
   const genesisStartOnce = await predictionContract
-    .genesisStartOnce()
-    ;
+    .genesisStartOnce();
 
   //its already running. get seconds left and run
   if (genesisStartOnce) {
-    const roundData = await predictionContract
-      .timestamps(currentRoundNo)
-      ;
-
-    const blockNumber = await getWeb3(pid).eth.getBlockNumber();
-    let block;
-
-    try{
-      block = await getWeb3(pid).eth.getBlock(blockNumber);
-      timerSyncCache[network] = block.timestamp * 1000 - Date.now();
-    }
-    catch(err){
-      console.log(err.message)
-    }
+    const roundData = await predictionContract.timestamps(currentRoundNo);
 
     let timestamp;
-  
-    if (block) timestamp = block.timestamp * 1000;
-    else {
+
+    try{
+      const provider = new JsonRpcProvider(rpcCache[network].currentRpc);
+      const blockNumBefore = await provider.getBlockNumber();
+      const blockBefore = await provider.getBlock(blockNumBefore);
+      timerSyncCache[network] = blockBefore.timestamp * 1000 - Date.now();
+      timestamp = blockBefore.timestamp * 1000;
+    }
+    catch(err){
+      console.log('blcok ts err')
+      console.log(err.message);
       const sync = timerSyncCache[network] ? timerSyncCache[network] : 0;
       timestamp = Date.now() + sync;
     }
+
+    // const blockNumber = await getWeb3(pid).eth.getBlockNumber();
+    // let block;
+
+    // try{
+    //   block = await getWeb3(pid).eth.getBlock(blockNumber);
+    //   timerSyncCache[network] = block.timestamp * 1000 - Date.now();
+    // }
+    // catch(err){
+    //   console.log(err.message)
+    // }
+    //  
+    // if (block) timestamp = block.timestamp * 1000;
+    // else {
+    //   const sync = timerSyncCache[network] ? timerSyncCache[network] : 0;
+    //   timestamp = Date.now() + sync;
+    // }
 
     const msecondsLeft = 1000 * roundData.lockTimestamp - timestamp;
 
