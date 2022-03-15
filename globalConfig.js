@@ -49,7 +49,7 @@ const config = {
     gasLimits:{
         pause:50000,
         execute:300000,
-        genesis:100000
+        genesis:200000
     }
 }
 
