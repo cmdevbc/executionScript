@@ -182,7 +182,7 @@ const pause = async (pid) => {
   coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
     await predictionContract
-      .pause({ from: operatorAddress, gasPrice });
+      .pause({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.pause });
 
     coloredLog(pid, "paused");
     return;
@@ -200,7 +200,7 @@ const unpause = async (pid) => {
   coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
     await predictionContract
-      .unpause({ from: operatorAddress, gasPrice });
+      .unpause({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.pause });
 
     coloredLog(pid, "unpaused");
 
@@ -347,7 +347,7 @@ const startExecuteRound = async (pid) => {
 
   try {
     const receipt = await predictionContract
-      .executeRound(price.toString(), { from: operatorAddress, gasPrice });
+      .executeRound(price.toString(), { from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.execute });
 
     if (receipt) {
       coloredLog(pid, `Transaction hash: ${receipt.hash}`);
@@ -629,7 +629,7 @@ const checkPredictionContract = async (pid) => {
 
     try {
       await contracts[pid]
-        .genesisStartRound({ from: operatorAddress, gasPrice });
+        .genesisStartRound({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.genesis });
 
       coloredLog(
         pid,

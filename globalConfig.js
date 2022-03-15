@@ -45,7 +45,12 @@ const config = {
         serverUrl: "https://k1hrjlf4rzgm.usemoralis.com:2053/server",
         appId: "8gdNI2jhASctAwzA3OeUGrwx96fhDX18M5P7qNyy"
     },
-    executeTimerOffset: 1000
+    executeTimerOffset: 1000,
+    gasLimits:{
+        pause:50000,
+        execute:300000,
+        genesis:100000
+    }
 }
 
 module.exports = config
