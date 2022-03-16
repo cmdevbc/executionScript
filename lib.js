@@ -484,23 +484,29 @@ const getNonce = async (pid) => {
   const predictionData = predictions[pid];
   let nonce = await signers[predictionData.network].getTransactionCount();
 
-  if(nonce.latest){
-    if(nonce > nonce.latest.nonce){
-      nonces.latest = {nonce, id:pid};
-    }
-    else {
-      if(nonce.latest.id == pid){
-        console.log('nonce:', nonce);
-        return nonce.latest.nonce;
-      }
-      
-      if(nonces.latest.id != pid){
-        nonce++;
-      }
-    }
+  if(!nonces[nonce]) nonces[nonce] = pid;
+  else if(nonces[nonce] != pid){
+    nonce++;
+    nonces[nonce] = pid;
   }
 
-  nonces.latest = {nonce, id:pid};
+  // if(nonce.latest){
+  //   if(nonce > nonce.latest.nonce){
+  //     nonces.latest = {nonce, id:pid};
+  //   }
+  //   else {
+  //     if(nonce.latest.id == pid){
+  //       console.log('nonce:', nonce);
+  //       return nonce.latest.nonce;
+  //     }
+      
+  //     if(nonces.latest.id != pid){
+  //       nonce++;
+  //     }
+  //   }
+  // }
+
+  // nonces.latest = {nonce, id:pid};
   
   console.log('nonce:', nonce);
   return nonce;
