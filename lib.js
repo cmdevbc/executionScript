@@ -612,7 +612,6 @@ const checkPredictionContract = async (pid) => {
       const provider = new JsonRpcProvider(rpcCache[network].currentRpc);
       const blockNumBefore = await provider.getBlockNumber();
       const blockBefore = await provider.getBlock(blockNumBefore);
-      console.log('blockData', blockBefore);
       timerSyncCache[network] = blockBefore.timestamp * 1000 - Date.now();
       timestamp = blockBefore.timestamp * 1000;
     }
