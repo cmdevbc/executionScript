@@ -183,7 +183,7 @@ const pause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
-    const nonce = await getNonce(pid);
+    const nonce = await getNonce(pid, "pause");
     await predictionContract
       .pause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
@@ -202,7 +202,7 @@ const unpause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
-    const nonce = await getNonce(pid);
+    const nonce = await getNonce(pid, "unpause");
     await predictionContract
       .unpause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
@@ -350,7 +350,7 @@ const startExecuteRound = async (pid) => {
   coloredLog(pid, "using gasPrice: " + gasPrice);
 
   try {
-    const nonce = await getNonce(pid);
+    const nonce = await getNonce(pid, "execute");
     const receipt = await predictionContract
       .executeRound(price.toString(), { from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.execute });
 
@@ -481,7 +481,7 @@ const chooseRpc = async (network) => {
   rpcCache[network].updatingRpc = false;
 };
 
-const getNonce = async (pid) => {
+const getNonce = async (pid, method) => {
   if(assigningNonce){
     await sleep(1000);
   }
@@ -491,10 +491,14 @@ const getNonce = async (pid) => {
   console.log(nonce);
   console.log(nonces);
 
-  if(!nonces[nonce]) nonces[nonce] = pid;
-  else if(nonces[nonce] != pid){
+  if(!nonces[nonce]) nonces[nonce] = {pid, method};
+  else if(nonces[nonce].pid != pid){
     nonce++;
-    nonces[nonce] = pid;
+    nonces[nonce] = {pid, method};
+  }
+  else if(nonces[nonce].pid == pid && nonces[nonce].method != method){
+    nonce++;
+    nonces[nonce] = {pid, method};
   }
 
   console.log(nonces);
@@ -657,7 +661,7 @@ const checkPredictionContract = async (pid) => {
     const gasPrice = await getGasPrice(pid);
 
     try {
-      const nonce = await getNonce(pid);
+      const nonce = await getNonce(pid, "genesis");
       const receipt = await contracts[pid]
         .genesisStartRound({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.genesis });
 
