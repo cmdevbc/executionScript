@@ -489,11 +489,15 @@ const getNonce = async (pid) => {
   const predictionData = predictions[pid];
   let nonce = await signers[predictionData.network].getTransactionCount();
 
+  console.log(nonces);
+
   if(!nonces[nonce]) nonces[nonce] = pid;
   else if(nonces[nonce] != pid){
     nonce++;
     nonces[nonce] = pid;
   }
+
+  console.log(nonces);
 
   console.log('nonce:', nonce);
   assigningNonce = false;
