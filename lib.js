@@ -518,7 +518,7 @@ const getNonce = async (pid, method) => {
   console.log(nonce);
   console.log(nonces);
   
-  if(nonces[nonce].pid == pid && nonces[nonce].method == method){
+  if(nonces[nonce] && nonces[nonce].pid == pid && nonces[nonce].method == method){
     console.log('nonce already ongoing:', nonce);
     return null;
   }
