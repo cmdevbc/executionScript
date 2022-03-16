@@ -517,6 +517,11 @@ const getNonce = async (pid, method) => {
   let nonce = await signers[predictionData.network].getTransactionCount();
   console.log(nonce);
   console.log(nonces);
+  
+  if(nonces[nonce].pid == pid && nonces[nonce].method == method){
+    console.log('nonce already ongoing:', nonce);
+    return null;
+  }
 
   if(!nonces[nonce]) nonces[nonce] = {pid, method};
   else if(nonces[nonce].pid != pid){
@@ -526,11 +531,6 @@ const getNonce = async (pid, method) => {
   else if(nonces[nonce].pid == pid && nonces[nonce].method != method){
     nonce = getNextNonce(nonce, pid, method);
     nonces[nonce] = {pid, method};
-  }
-
-  if(nonces[nonce].pid == pid && nonces[nonce].method == method){
-    console.log('nonce already ongoing:', nonce);
-    return null;
   }
 
   console.log(nonces);
