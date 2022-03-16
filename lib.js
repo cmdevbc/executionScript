@@ -184,6 +184,10 @@ const pause = async (pid) => {
   coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
     const nonce = await getNonce(pid, "pause");
+    if(!nonce){
+      await sleep(2000);
+      return checkPredictionContract(pid);
+    }
     await predictionContract
       .pause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
@@ -203,6 +207,10 @@ const unpause = async (pid) => {
   coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
     const nonce = await getNonce(pid, "unpause");
+    if(!nonce){
+      await sleep(2000);
+      return checkPredictionContract(pid);
+    }
     await predictionContract
       .unpause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
@@ -351,6 +359,10 @@ const startExecuteRound = async (pid) => {
 
   try {
     const nonce = await getNonce(pid, "execute");
+    if(!nonce){
+      await sleep(2000);
+      return checkPredictionContract(pid);
+    }
     const receipt = await predictionContract
       .executeRound(price.toString(), { from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.execute });
 
@@ -516,6 +528,11 @@ const getNonce = async (pid, method) => {
     nonces[nonce] = {pid, method};
   }
 
+  if(nonces[nonce].pid == pid && nonces[nonce].method == method){
+    console.log('nonce already ongoing:', nonce);
+    return null;
+  }
+
   console.log(nonces);
   console.log('nonce:', nonce);
   assigningNonce = false;
@@ -676,6 +693,10 @@ const checkPredictionContract = async (pid) => {
 
     try {
       const nonce = await getNonce(pid, "genesis");
+      if(!nonce){
+        await sleep(2000);
+        return checkPredictionContract(pid);
+      }
       const receipt = await contracts[pid]
         .genesisStartRound({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.genesis });
 
