@@ -515,8 +515,6 @@ const getNonce = async (pid, method) => {
   assigningNonce = true;
   const predictionData = predictions[pid];
   let nonce = await signers[predictionData.network].getTransactionCount();
-  console.log(nonce);
-  console.log(nonces);
   
   if(nonces[nonce] && nonces[nonce].pid == pid && nonces[nonce].method == method){
     console.log('nonce already ongoing:', nonce);
@@ -533,7 +531,7 @@ const getNonce = async (pid, method) => {
     nonces[nonce] = {pid, method};
   }
 
-  console.log(nonces);
+  //console.log(nonces);
   console.log('nonce:', nonce);
   assigningNonce = false;
   return nonce;
