@@ -482,7 +482,7 @@ const chooseRpc = async (network) => {
 };
 
 const getNonce = async (pid) => {
-  while(assigningNonce){
+  if(assigningNonce){
     await sleep(1000);
   }
   assigningNonce = true;
