@@ -181,8 +181,9 @@ const pause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
+    const nonce = await getNonce(pid);
     await predictionContract
-      .pause({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.pause });
+      .pause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
     coloredLog(pid, "paused");
     return;
@@ -199,8 +200,9 @@ const unpause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
+    const nonce = await getNonce(pid);
     await predictionContract
-      .unpause({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.pause });
+      .unpause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
     coloredLog(pid, "unpaused");
 
@@ -346,8 +348,9 @@ const startExecuteRound = async (pid) => {
   coloredLog(pid, "using gasPrice: " + gasPrice);
 
   try {
+    const nonce = await getNonce(pid);
     const receipt = await predictionContract
-      .executeRound(price.toString(), { from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.execute });
+      .executeRound(price.toString(), { from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.execute });
 
     if (receipt) {
       coloredLog(pid, `Transaction hash: ${receipt.hash}`);
@@ -476,12 +479,20 @@ const chooseRpc = async (network) => {
   rpcCache[network].updatingRpc = false;
 };
 
+const getNonce = async (pid) => {
+  const predictionData = predictions[pid];
+  const nonce = await signers[predictionData.network].getTransactionCount();
+  console.log('transaction count:', nonce);
+  return nonce;
+}
+
 const getPredictionContract = (pid) => {
   if (contracts[pid]) return contracts[pid];
   const predictionData = predictions[pid];
 
   const provider = new JsonRpcProvider(rpcCache[predictionData.network].currentRpc);
   const signer = new Wallet(privateKey, provider);
+  signers[predictionData.network] = signer;
   const predictionContract = new ethers.Contract(predictionData.address, abi, signer);
   // const provider = new Provider(
   //   privateKey,
@@ -628,8 +639,9 @@ const checkPredictionContract = async (pid) => {
     const gasPrice = await getGasPrice(pid);
 
     try {
+      const nonce = await getNonce(pid);
       const receipt = await contracts[pid]
-        .genesisStartRound({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.genesis });
+        .genesisStartRound({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.genesis });
 
       if(receipt){
         coloredLog(
