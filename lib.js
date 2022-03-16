@@ -481,6 +481,21 @@ const chooseRpc = async (network) => {
   rpcCache[network].updatingRpc = false;
 };
 
+const getNextNonce = (nonce, pid, method) => {
+  nonce++;
+  if(!nonces[nonce]) nonces[nonce] = {pid, method};
+  else if(nonces[nonce].pid != pid){
+    nonce = getNextNonce(nonce, pid, method);
+    nonces[nonce] = {pid, method};
+  }
+  else if(nonces[nonce].pid == pid && nonces[nonce].method != method){
+    nonce = getNextNonce(nonce, pid, method);
+    nonces[nonce] = {pid, method};
+  }
+
+  return nonce;
+}
+
 const getNonce = async (pid, method) => {
   if(assigningNonce){
     await sleep(1000);
@@ -493,16 +508,15 @@ const getNonce = async (pid, method) => {
 
   if(!nonces[nonce]) nonces[nonce] = {pid, method};
   else if(nonces[nonce].pid != pid){
-    nonce++;
+    nonce = getNextNonce(nonce, pid, method);
     nonces[nonce] = {pid, method};
   }
   else if(nonces[nonce].pid == pid && nonces[nonce].method != method){
-    nonce++;
+    nonce = getNextNonce(nonce, pid, method);
     nonces[nonce] = {pid, method};
   }
 
   console.log(nonces);
-
   console.log('nonce:', nonce);
   assigningNonce = false;
   return nonce;
