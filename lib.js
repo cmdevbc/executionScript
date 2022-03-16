@@ -30,6 +30,7 @@ const timerSyncCache = {};
 const nonces = {};
 
 const priceData = {};
+let assigningNonce = false;
 
 Moralis.start({
   serverUrl: globalConfig.moralis.serverUrl,
@@ -481,6 +482,10 @@ const chooseRpc = async (network) => {
 };
 
 const getNonce = async (pid) => {
+  while(assigningNonce){
+    await sleep(1000);
+  }
+  assigningNonce = true;
   const predictionData = predictions[pid];
   let nonce = await signers[predictionData.network].getTransactionCount();
 
@@ -490,25 +495,8 @@ const getNonce = async (pid) => {
     nonces[nonce] = pid;
   }
 
-  // if(nonce.latest){
-  //   if(nonce > nonce.latest.nonce){
-  //     nonces.latest = {nonce, id:pid};
-  //   }
-  //   else {
-  //     if(nonce.latest.id == pid){
-  //       console.log('nonce:', nonce);
-  //       return nonce.latest.nonce;
-  //     }
-      
-  //     if(nonces.latest.id != pid){
-  //       nonce++;
-  //     }
-  //   }
-  // }
-
-  // nonces.latest = {nonce, id:pid};
-  
   console.log('nonce:', nonce);
+  assigningNonce = false;
   return nonce;
 }
 
