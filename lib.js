@@ -628,17 +628,26 @@ const checkPredictionContract = async (pid) => {
     const gasPrice = await getGasPrice(pid);
 
     try {
-      await contracts[pid]
+      const receipt = await contracts[pid]
         .genesisStartRound({ from: operatorAddress, gasPrice, gasLimit: globalConfig.gasLimits.genesis });
 
-      coloredLog(
-        pid,
-        "GenesisStartOnce is complete, waiting for interval seconds"
-      );
+      if(receipt){
+        coloredLog(
+          pid,
+          "GenesisStartOnce is complete, waiting for interval seconds"
+        );
+        coloredLog(pid, `Transaction hash: ${receipt.hash}`);
+        await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset);
+  
+        return startExecuteRound(pid);
+      }
+      else{
+        coloredLog(
+          pid,
+          "GenesisStartOnce is FAILED"
+        );
+      }
 
-      await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset);
-
-      return startExecuteRound(pid);
     } catch (error) {
       coloredLog(pid, error.message);
       coloredLog(pid, "could not start genesis, will retry");
