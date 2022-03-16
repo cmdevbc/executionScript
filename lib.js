@@ -488,7 +488,7 @@ const getNonce = async (pid) => {
   assigningNonce = true;
   const predictionData = predictions[pid];
   let nonce = await signers[predictionData.network].getTransactionCount();
-
+  console.log(nonce);
   console.log(nonces);
 
   if(!nonces[nonce]) nonces[nonce] = pid;
