@@ -403,6 +403,7 @@ const startExecuteRound = async (pid) => {
           executionPrice.set("closeTimestamp", closeTimestamp);
           executionPrice.set("diffTimestamp", diffTimestamp);
           executionPrice.set("api", predictions[pid].apitype);
+          executionPrice.set("incrementCounter", incrementCounter);
   
           if(priceData[predictions[pid].title] && (diffTimestamp > 20000 || diffTimestamp < -20000)){
             executionPrice.set("allPriceData",  JSON.stringify(priceData[predictions[pid].title]));
