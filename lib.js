@@ -391,6 +391,7 @@ const startExecuteRound = async (pid) => {
       const isMined = await isTransactionMined(pid, receipt.hash);
 
       if(isMined){
+        coloredLog(pid, `Transaction is mined, waiting for next round...`);
         try {
           const ExecutionPrice = Moralis.Object.extend("ExecutionPrice");
           const executionPrice = new ExecutionPrice();
