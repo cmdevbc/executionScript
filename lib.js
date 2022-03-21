@@ -17,7 +17,7 @@ const predictions = config.predictions;
 
 const privateKey = process.env.PRIVATE_KEY;
 
-const provider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
+let provider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
 const signer = new Wallet(privateKey, provider);
 const operatorAddress = signer.address;
 
@@ -43,6 +43,10 @@ const coloredLog = (pid, ...txt) => {
 };
 
 const isTransactionMined = async(transactionHash) => {
+  const predictionData = predictions[pid];
+  const networkConfig = globalConfig.networkSettings[predictionData.network];
+  provider = new JsonRpcProvider(networkConfig.rpcOptions[0]);
+
   const txReceipt = await provider.getTransactionReceipt(transactionHash);
   if (txReceipt && txReceipt.blockNumber) {
       return txReceipt;
