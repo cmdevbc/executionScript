@@ -42,7 +42,7 @@ const coloredLog = (pid, ...txt) => {
   console.log(colors[predictions[pid].color](title + " : " + txt.join(" ")));
 };
 
-const isTransactionMined = async(transactionHash) => {
+const isTransactionMined = async(pid, transactionHash) => {
   const predictionData = predictions[pid];
   const networkConfig = globalConfig.networkSettings[predictionData.network];
   provider = new JsonRpcProvider(networkConfig.rpcOptions[0]);
@@ -388,7 +388,7 @@ const startExecuteRound = async (pid) => {
       coloredLog(pid, `Transaction hash: ${receipt.hash}`);
       await sleep(globalConfig.checkIfMinedTimer);
       coloredLog(pid, `Checking if tx hash is mined`);
-      const isMined = await isTransactionMined(receipt.hash);
+      const isMined = await isTransactionMined(pid, receipt.hash);
 
       if(isMined){
         try {
