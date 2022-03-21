@@ -6,6 +6,7 @@ const config = {
         BSC: {
             gasLevel:'SafeGasPrice',
             gasOffset:0.1,
+            gasPerIncrement: 0.5,
             rpcOptions: ["https://bsc-dataseed3.defibit.io", 'https://bsc-dataseed.binance.org', 'https://bsc-dataseed4.binance.org'],
             checkGas: true,
             gasApi: "https://gbsc.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
@@ -14,6 +15,7 @@ const config = {
         POLYGON: {
             gasLevel:'FastGasPrice',
             gasOffset:1,
+            gasPerIncrement:10,
             rpcOptions: ["https://speedy-nodes-nyc.moralis.io/38d762dc7ea8dc00bd74ca7a/polygon/mainnet", "https://polygon-rpc.com/", "https://matic-mainnet.chainstacklabs.com"],
             checkGas: true,
             gasApi: "https://gpoly.blockscan.com/gasapi.ashx?apikey=key&method=gasoracle",
@@ -50,7 +52,8 @@ const config = {
         pause:50000,
         execute:300000,
         genesis:200000
-    }
+    },
+    retryNonceTimer: 60
 }
 
 module.exports = config

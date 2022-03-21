@@ -147,7 +147,7 @@ const getWeb3 = (pid) => {
   return web3;
 };
 
-const getGasPrice = async (pid) => {
+const getGasPrice = async (pid, incrementCounter = 0) => {
   const predictionData = predictions[pid];
   const networkConfig = globalConfig.networkSettings[predictionData.network];
   const fallbackGas = networkConfig.gasPrice;
@@ -160,8 +160,12 @@ const getGasPrice = async (pid) => {
         : "FastGasPrice";
       const gas = dataJson.result[gasLevel];
       const gasOffset = networkConfig.gasOffset ? networkConfig.gasOffset : 0;
+      const gasPerIncrement = networkConfig.gasPerIncrement ? networkConfig.gasPerIncrement : 0;
+      if(gasPerIncrement  > 0){
+        coloredLog(pid, "using extra gas:", incrementCounter * gasPerIncrement);
+      }
       const gasPriceWei = getWeb3(pid).utils.toWei(
-        (parseFloat(gas) + gasOffset).toString(),
+        (parseFloat(gas) + gasOffset + incrementCounter * gasPerIncrement).toString(),
         "gwei"
       );
       return gasPriceWei.toString();
@@ -183,7 +187,7 @@ const pause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
-    const nonce = await getNonce(pid, "pause");
+    const {nonce} = await getNonce(pid, "pause");
     if(!nonce){
       await sleep(2000);
       return checkPredictionContract(pid);
@@ -206,7 +210,7 @@ const unpause = async (pid) => {
   const predictionContract = getPredictionContract(pid);
   coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
-    const nonce = await getNonce(pid, "unpause");
+    const {nonce} = await getNonce(pid, "unpause");
     if(!nonce){
       await sleep(2000);
       return checkPredictionContract(pid);
@@ -354,15 +358,16 @@ const startExecuteRound = async (pid) => {
   );
 
   coloredLog(pid, "calling executeRound @  " + date);
-  const gasPrice = await getGasPrice(pid);
-  coloredLog(pid, "using gasPrice: " + gasPrice);
 
   try {
-    const nonce = await getNonce(pid, "execute");
+    const {nonce, incrementCounter} = await getNonce(pid, "execute");
     if(!nonce){
       await sleep(2000);
       return checkPredictionContract(pid);
     }
+    const gasPrice = await getGasPrice(pid, incrementCounter);
+    coloredLog(pid, "using gasPrice: " + gasPrice);
+
     const receipt = await predictionContract
       .executeRound(price.toString(), { from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.execute });
 
@@ -515,26 +520,33 @@ const getNonce = async (pid, method) => {
   assigningNonce = true;
   const predictionData = predictions[pid];
   let nonce = await signers[predictionData.network].getTransactionCount();
+
+  const timestamp = Math.ceil(Date.now() / 1000);
   
   if(nonces[nonce] && nonces[nonce].pid == pid && nonces[nonce].method == method){
+    const diff = timestamp - nonces[nonce].timestamp;
     console.log('nonce already ongoing:', nonce);
-    return null;
+    console.log('nonce time diff:', diff);
+    if(diff > globalConfig.retryNonceTimer)
+      return {nonce, incrementCounter: diff % globalConfig.retryNonceTimer};
+    else
+      return {nonce:null, incrementCounter: 0};
   }
 
-  if(!nonces[nonce]) nonces[nonce] = {pid, method};
+  if(!nonces[nonce]) nonces[nonce] = {pid, method, timestamp};
   else if(nonces[nonce].pid != pid){
     nonce = getNextNonce(nonce, pid, method);
-    nonces[nonce] = {pid, method};
+    nonces[nonce] = {pid, method, timestamp};
   }
   else if(nonces[nonce].pid == pid && nonces[nonce].method != method){
     nonce = getNextNonce(nonce, pid, method);
-    nonces[nonce] = {pid, method};
+    nonces[nonce] = {pid, method, timestamp};
   }
 
   //console.log(nonces);
   console.log('nonce:', nonce);
   assigningNonce = false;
-  return nonce;
+  return {nonce, incrementCounter: 0};
 }
 
 const getPredictionContract = (pid) => {
@@ -690,7 +702,7 @@ const checkPredictionContract = async (pid) => {
     const gasPrice = await getGasPrice(pid);
 
     try {
-      const nonce = await getNonce(pid, "genesis");
+      const {nonce} = await getNonce(pid, "genesis");
       if(!nonce){
         await sleep(2000);
         return checkPredictionContract(pid);
