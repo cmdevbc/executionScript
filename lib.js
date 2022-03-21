@@ -382,7 +382,7 @@ const startExecuteRound = async (pid) => {
 
     if (receipt) {
       coloredLog(pid, `Transaction hash: ${receipt.hash}`);
-      await sleep(30000);
+      await sleep(globalConfig.checkIfMinedTimer);
       coloredLog(pid, `Checking if tx hash is mined`);
       const isMined = await isTransactionMined(receipt.hash);
 
@@ -434,7 +434,7 @@ const startExecuteRound = async (pid) => {
 };
 
 const successExecuteRound = async (pid) => {
-  await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset - 30000);
+  await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset - globalConfig.checkIfMinedTimer);
   startExecuteRound(pid);
 };
 
