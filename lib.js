@@ -42,6 +42,13 @@ const coloredLog = (pid, ...txt) => {
   console.log(colors[predictions[pid].color](title + " : " + txt.join(" ")));
 };
 
+const isTransactionMined = async(transactionHash) => {
+  const txReceipt = await provider.getTransactionReceipt(transactionHash);
+  if (txReceipt && txReceipt.blockNumber) {
+      return txReceipt;
+  }
+}
+
 const checkTime = () => {
   const date = new Date();
   const hour = date.getHours();
@@ -375,30 +382,40 @@ const startExecuteRound = async (pid) => {
 
     if (receipt) {
       coloredLog(pid, `Transaction hash: ${receipt.hash}`);
+      await sleep(5000);
+      coloredLog(pid, `Checking if tx hash is mined`);
+      const isMined = await isTransactionMined(transactionHash);
 
-      try {
-        const ExecutionPrice = Moralis.Object.extend("ExecutionPrice");
-        const executionPrice = new ExecutionPrice();
-        executionPrice.set("prediction", predictions[pid].title);
-        executionPrice.set("epoch", currentRoundNo.toString());
-        executionPrice.set("network", predictions[pid].network);
-        executionPrice.set("price", price.toString());
-        executionPrice.set("timestamp", priceTimestamp);
-        executionPrice.set("closeTimestamp", closeTimestamp);
-        executionPrice.set("diffTimestamp", diffTimestamp);
-        executionPrice.set("api", predictions[pid].apitype);
-
-        if(priceData[predictions[pid].title] && (diffTimestamp > 20000 || diffTimestamp < -20000)){
-          executionPrice.set("allPriceData",  JSON.stringify(priceData[predictions[pid].title]));
+      if(isMined){
+        try {
+          const ExecutionPrice = Moralis.Object.extend("ExecutionPrice");
+          const executionPrice = new ExecutionPrice();
+          executionPrice.set("prediction", predictions[pid].title);
+          executionPrice.set("epoch", currentRoundNo.toString());
+          executionPrice.set("network", predictions[pid].network);
+          executionPrice.set("price", price.toString());
+          executionPrice.set("timestamp", priceTimestamp);
+          executionPrice.set("closeTimestamp", closeTimestamp);
+          executionPrice.set("diffTimestamp", diffTimestamp);
+          executionPrice.set("api", predictions[pid].apitype);
+  
+          if(priceData[predictions[pid].title] && (diffTimestamp > 20000 || diffTimestamp < -20000)){
+            executionPrice.set("allPriceData",  JSON.stringify(priceData[predictions[pid].title]));
+          }
+  
+          executionPrice.save();
+        } catch (err) {
+          console.log(err.message);
+          coloredLog(pid, "Couldnt save price information to Moralis");
         }
-
-        executionPrice.save();
-      } catch (err) {
-        console.log(err.message);
-        coloredLog(pid, "Couldnt save price information to Moralis");
+  
+        return successExecuteRound(pid);
       }
-
-      return successExecuteRound(pid);
+      else{
+        coloredLog(pid, `tx hash is still not mined, giving another 25 sec and rechecking`);
+        await sleep(25000);
+        return checkPredictionContract(pid);
+      }
     }
   } catch (error) {
     coloredLog(pid, "ERROR REVERT:");
@@ -418,7 +435,7 @@ const startExecuteRound = async (pid) => {
 };
 
 const successExecuteRound = async (pid) => {
-  await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset);
+  await sleep(predictions[pid].interval * 1000 + globalConfig.executeTimerOffset - 5000);
   startExecuteRound(pid);
 };
 
