@@ -183,15 +183,15 @@ function sleep(ms) {
 
 const pause = async (pid) => {
   coloredLog(pid, "pausing step 1 ...");
-  const gasPrice = await getGasPrice(pid);
   const predictionContract = getPredictionContract(pid);
-  coloredLog(pid, "pausing with gas price: " + gasPrice);
   try {
-    const {nonce} = await getNonce(pid, "pause");
+    const {nonce, incrementCounter} = await getNonce(pid, "pause");
     if(!nonce){
-      await sleep(2000);
+      await sleep(globalConfig.sameNonceRetryTimer);
       return checkPredictionContract(pid);
     }
+    const gasPrice = await getGasPrice(pid, incrementCounter);
+    coloredLog(pid, "using gasPrice: " + gasPrice);
     await predictionContract
       .pause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
@@ -206,15 +206,16 @@ const pause = async (pid) => {
 
 const unpause = async (pid) => {
   coloredLog(pid, "unpausing step 1...");
-  const gasPrice = await getGasPrice(pid);
   const predictionContract = getPredictionContract(pid);
-  coloredLog(pid, "unpausing gas price: " + gasPrice);
   try {
-    const {nonce} = await getNonce(pid, "unpause");
+    const {nonce, incrementCounter} = await getNonce(pid, "unpause");
     if(!nonce){
-      await sleep(2000);
+      await sleep(globalConfig.sameNonceRetryTimer);
       return checkPredictionContract(pid);
     }
+    const gasPrice = await getGasPrice(pid, incrementCounter);
+    coloredLog(pid, "unpausing gas price: " + gasPrice);
+
     await predictionContract
       .unpause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
 
@@ -362,7 +363,7 @@ const startExecuteRound = async (pid) => {
   try {
     const {nonce, incrementCounter} = await getNonce(pid, "execute");
     if(!nonce){
-      await sleep(2000);
+      await sleep(globalConfig.sameNonceRetryTimer);
       return checkPredictionContract(pid);
     }
     const gasPrice = await getGasPrice(pid, incrementCounter);
@@ -699,14 +700,16 @@ const checkPredictionContract = async (pid) => {
   } //its not started after unpaused, so run them in turns
   else {
     coloredLog(pid, "Running Genesis StartOnce...");
-    const gasPrice = await getGasPrice(pid);
 
     try {
-      const {nonce} = await getNonce(pid, "genesis");
+      const {nonce, incrementCounter} = await getNonce(pid, "genesis");
       if(!nonce){
-        await sleep(2000);
+        await sleep(globalConfig.sameNonceRetryTimer);
         return checkPredictionContract(pid);
       }
+      const gasPrice = await getGasPrice(pid, incrementCounter);
+      coloredLog(pid, "using gasPrice: " + gasPrice);
+
       const receipt = await contracts[pid]
         .genesisStartRound({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.genesis });
 
