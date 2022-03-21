@@ -384,7 +384,7 @@ const startExecuteRound = async (pid) => {
       coloredLog(pid, `Transaction hash: ${receipt.hash}`);
       await sleep(5000);
       coloredLog(pid, `Checking if tx hash is mined`);
-      const isMined = await isTransactionMined(transactionHash);
+      const isMined = await isTransactionMined(receipt.hash);
 
       if(isMined){
         try {
