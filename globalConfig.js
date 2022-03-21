@@ -53,7 +53,7 @@ const config = {
         execute:300000,
         genesis:200000
     },
-    retryNonceTimer: 60,
+    retryNonceTimer: 30,
     sameNonceRetryTimer: 10000,
 }
 

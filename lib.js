@@ -162,6 +162,7 @@ const getGasPrice = async (pid, incrementCounter = 0) => {
       const gasOffset = networkConfig.gasOffset ? networkConfig.gasOffset : 0;
       const gasPerIncrement = networkConfig.gasPerIncrement ? networkConfig.gasPerIncrement : 0;
       if(gasPerIncrement  > 0){
+        coloredLog(pid, "using extra gas counter:", incrementCounter);
         coloredLog(pid, "using extra gas:", incrementCounter * gasPerIncrement);
       }
       const gasPriceWei = getWeb3(pid).utils.toWei(
@@ -529,7 +530,7 @@ const getNonce = async (pid, method) => {
     console.log('nonce already ongoing:', nonce);
     console.log('nonce time diff:', diff);
     if(diff > globalConfig.retryNonceTimer)
-      return {nonce, incrementCounter: diff % globalConfig.retryNonceTimer};
+      return {nonce, incrementCounter: Math.floor(diff / globalConfig.retryNonceTimer)};
     else
       return {nonce:null, incrementCounter: 0};
   }
