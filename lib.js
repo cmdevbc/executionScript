@@ -28,6 +28,7 @@ const priceCache = {};
 const rpcCache = {};
 const timerSyncCache = {};
 const nonces = {};
+const gasUsed = {};
 
 const priceData = {};
 let assigningNonce = false;
@@ -158,11 +159,26 @@ const getWeb3 = (pid) => {
   return web3;
 };
 
-const getGasPrice = async (pid, incrementCounter = 0) => {
+const getGasPrice = async (pid, nonce, incrementCounter = 0) => {
   const predictionData = predictions[pid];
   const networkConfig = globalConfig.networkSettings[predictionData.network];
   const fallbackGas = networkConfig.gasPrice;
   if (networkConfig.checkGas) {
+
+    const gasOffset = networkConfig.gasOffset ? networkConfig.gasOffset : 0;
+    const gasPerIncrement = networkConfig.gasPerIncrement ? networkConfig.gasPerIncrement : 0;
+
+    if(incrementCounter > 0 && gasUsed[nonce]){
+      coloredLog(pid, "using extra gas counter from an old nonce:", incrementCounter);
+      coloredLog(pid, "using extra gas:", incrementCounter * gasPerIncrement);
+      const gasPriceWei = getWeb3(pid).utils.toWei(
+        (parseFloat(gasUsed[nonce]) + gasOffset + incrementCounter * gasPerIncrement).toString(),
+        "gwei"
+      );
+      gasUsed[nonce] = gasPriceWei.toString();
+      return gasPriceWei.toString();
+    }
+
     try {
       const data = await fetch(networkConfig.gasApi);
       const dataJson = await data.json();
@@ -170,8 +186,6 @@ const getGasPrice = async (pid, incrementCounter = 0) => {
         ? networkConfig.gasLevel
         : "FastGasPrice";
       const gas = dataJson.result[gasLevel];
-      const gasOffset = networkConfig.gasOffset ? networkConfig.gasOffset : 0;
-      const gasPerIncrement = networkConfig.gasPerIncrement ? networkConfig.gasPerIncrement : 0;
       if(gasPerIncrement  > 0){
         coloredLog(pid, "using extra gas counter:", incrementCounter);
         coloredLog(pid, "using extra gas:", incrementCounter * gasPerIncrement);
@@ -180,6 +194,7 @@ const getGasPrice = async (pid, incrementCounter = 0) => {
         (parseFloat(gas) + gasOffset + incrementCounter * gasPerIncrement).toString(),
         "gwei"
       );
+      gasUsed[nonce] = gasPriceWei.toString();
       return gasPriceWei.toString();
     } catch (err) {
       return fallbackGas;
@@ -202,7 +217,7 @@ const pause = async (pid) => {
       await sleep(globalConfig.sameNonceRetryTimer);
       return checkPredictionContract(pid);
     }
-    const gasPrice = await getGasPrice(pid, incrementCounter);
+    const gasPrice = await getGasPrice(pid, nonce, incrementCounter);
     coloredLog(pid, "using gasPrice: " + gasPrice);
     await predictionContract
       .pause({ from: operatorAddress, gasPrice, nonce, gasLimit: globalConfig.gasLimits.pause });
@@ -225,7 +240,7 @@ const unpause = async (pid) => {
       await sleep(globalConfig.sameNonceRetryTimer);
       return checkPredictionContract(pid);
     }
-    const gasPrice = await getGasPrice(pid, incrementCounter);
+    const gasPrice = await getGasPrice(pid, nonce, incrementCounter);
     coloredLog(pid, "unpausing gas price: " + gasPrice);
 
     await predictionContract
@@ -378,7 +393,7 @@ const startExecuteRound = async (pid) => {
       await sleep(globalConfig.sameNonceRetryTimer);
       return checkPredictionContract(pid);
     }
-    const gasPrice = await getGasPrice(pid, incrementCounter);
+    const gasPrice = await getGasPrice(pid, nonce, incrementCounter);
     coloredLog(pid, "using gasPrice: " + gasPrice);
 
     const receipt = await predictionContract
@@ -730,7 +745,7 @@ const checkPredictionContract = async (pid) => {
         await sleep(globalConfig.sameNonceRetryTimer);
         return checkPredictionContract(pid);
       }
-      const gasPrice = await getGasPrice(pid, incrementCounter);
+      const gasPrice = await getGasPrice(pid, nonce, incrementCounter);
       coloredLog(pid, "using gasPrice: " + gasPrice);
 
       const receipt = await contracts[pid]
