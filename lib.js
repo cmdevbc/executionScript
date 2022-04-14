@@ -171,10 +171,10 @@ const getGasPrice = async (pid, nonce, incrementCounter = 0) => {
     if(incrementCounter > 0 && gasUsed[nonce]){
       coloredLog(pid, "using extra gas counter from an old nonce:", incrementCounter);
       coloredLog(pid, "using extra gas:", incrementCounter * gasPerIncrement);
-      const gasPriceWei = getWeb3(pid).utils.toWei(
-        (parseFloat(gasUsed[nonce]) + gasOffset + incrementCounter * gasPerIncrement).toString(),
+      const gasPriceWei =  parseInt(gasUsed[nonce]) + parseInt(getWeb3(pid).utils.toWei(
+        (incrementCounter * gasPerIncrement).toString(),
         "gwei"
-      );
+      ));
       gasUsed[nonce] = gasPriceWei.toString();
       return gasPriceWei.toString();
     }
