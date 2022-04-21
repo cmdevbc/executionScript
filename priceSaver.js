@@ -71,7 +71,7 @@ const checkPredictions = () => {
     const prediction = config.predictions[i];
     if (prediction.apitype == "KUCOIN") {
 
-      const saveInterval = prediction.saveInterval || 1000;
+      const saveInterval = prediction.saveInterval || 500;
       const priceArrLength = 10 + prediction.interval * 1000 / saveInterval;
       setInterval(() => savePrice(prediction, priceArrLength), prediction.saveInterval);
     }
@@ -79,5 +79,3 @@ const checkPredictions = () => {
 };
 
 checkPredictions();
-
-//, saveInterval: 500,
