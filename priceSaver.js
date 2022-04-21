@@ -8,11 +8,15 @@ const fetch = (...args) =>
 
 const priceData = {};
 
-const priceArrLength = 1800;
-
 const getFileName = (prediction) => {
-    return './roundData/'+ prediction.network + '_' + prediction.title + '_prices.json';
-}
+  return (
+    "./roundData/" +
+    prediction.network +
+    "_" +
+    prediction.title +
+    "_prices.json"
+  );
+};
 
 const getPriceKUCOIN = async (code) => {
   try {
@@ -29,45 +33,51 @@ const getPriceKUCOIN = async (code) => {
   }
 };
 
-const loadPriceDataToCache = (pid) => {
-    const prediction = config.predictions[pid];
-    const fileName = getFileName(prediction);
-    if (!fs.existsSync(fileName)) {
-      fs.writeFileSync(fileName, JSON.stringify([]));
-      priceData[prediction.title] = []
-    }
-    else {
-      let rawdata = fs.readFileSync(fileName);
-      rawdata = rawdata.length > 0 ? rawdata : "[]";
-      priceData[prediction.title] = JSON.parse(rawdata);  
-    }
+const loadPriceDataToCache = (prediction) => {
+  const fileName = getFileName(prediction);
+  if (!fs.existsSync(fileName)) {
+    fs.writeFileSync(fileName, JSON.stringify([]));
+    priceData[prediction.title] = [];
+  } else {
+    let rawdata = fs.readFileSync(fileName);
+    rawdata = rawdata.length > 0 ? rawdata : "[]";
+    priceData[prediction.title] = JSON.parse(rawdata);
+  }
+};
+
+const savePrice = async (prediction, priceArrLength) => {
+  if (!priceData[prediction.title]) {
+    loadPriceDataToCache(prediction);
   }
 
-const savePrice = async () => {
-  for (let i = 0; i < config.predictions.length; i++) {
-    const prediction = config.predictions[i];
+  if (!prediction.keepPaused) {
+    const data = await getPriceKUCOIN(prediction.apicode);
+    if (data) {
+      const fileName = getFileName(prediction);
 
-    if(prediction.apitype == 'KUCOIN'){
+      priceData[prediction.title].unshift(data);
+      if (priceData[prediction.title].length > priceArrLength)
+        priceData[prediction.title].pop();
 
-      if(!priceData[prediction.title]){
-          loadPriceDataToCache(i);
-      }
+      fs.writeFileSync(fileName, JSON.stringify(priceData[prediction.title]));
 
-      if (!prediction.keepPaused) {
-        const data = await getPriceKUCOIN(prediction.apicode);
-        if (data) {
-          const fileName = getFileName(prediction);
-
-          priceData[prediction.title].unshift(data);
-          if (priceData[prediction.title].length > priceArrLength) priceData[prediction.title].pop();
-
-          fs.writeFileSync(fileName, JSON.stringify(priceData[prediction.title]));
-
-          console.log('saving price for ', prediction.title, data);
-        }
-      }
+      //console.log("saving price for ", prediction.title, data);
     }
   }
 };
 
-setInterval(savePrice, 500);
+const checkPredictions = () => {
+  for (let i = 0; i < config.predictions.length; i++) {
+    const prediction = config.predictions[i];
+    if (prediction.apitype == "KUCOIN") {
+
+      const saveInterval = prediction.saveInterval || 1000;
+      const priceArrLength = 10 + prediction.interval * 1000 / saveInterval;
+      setInterval(() => savePrice(prediction, priceArrLength), prediction.saveInterval);
+    }
+  }
+};
+
+checkPredictions();
+
+//, saveInterval: 500,
