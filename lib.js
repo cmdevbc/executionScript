@@ -128,7 +128,8 @@ const getPriceHUOBI = async (code) => {
   const dataJson = await data.json();
   if (!dataJson || !dataJson.tick) return 0;
   const price = dataJson.tick.data[0].price;
-  return price;
+  const priceTemp = Math.round(parseFloat(price) * 100000000);
+  return priceTemp;
 };
 
 const getPriceBINANCE = async (code) => {
