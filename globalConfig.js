@@ -14,7 +14,7 @@ const config = {
         },
         POLYGON: {
             gasLevel:'FastGasPrice',
-            gasOffset:1,
+            gasOffset:10,
             gasPerIncrement:10,
             rpcOptions: ["https://speedy-nodes-nyc.moralis.io/38d762dc7ea8dc00bd74ca7a/polygon/mainnet", "https://polygon-rpc.com/", "https://matic-mainnet.chainstacklabs.com"],
             checkGas: true,
