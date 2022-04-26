@@ -42,8 +42,9 @@ const getPriceHUOBI = async (code) => {
     const dataJson = await data.json();
     if (!dataJson || !dataJson.tick) return 0;
     const price = dataJson.tick.data[0].price;
+    const priceTemp = Math.round(parseFloat(price) * 100000000);
     const timestamp = Math.round(dataJson.tick.data[0].ts / 1000);
-    const result =  { timestamp, price };
+    const result =  { timestamp, price: priceTemp };
     return result;
   } catch (err) {
     return null;
