@@ -109,6 +109,8 @@ const getPrice = (pid) => {
     return getPriceBINANCE(predictionData.apicode);
   else if (predictionData.apitype == "KUCOIN")
     return getPriceKUCOIN(predictionData.apicode);
+  else if (predictionData.apitype == "HUOBI")
+    return getPriceHUOBI(predictionData.apicode);
 };
 
 const getPriceFTX = async (code) => {
@@ -117,6 +119,16 @@ const getPriceFTX = async (code) => {
   const price = dataJson.result.price;
   const priceTemp = Math.round(parseFloat(price) * 100000000);
   return priceTemp;
+};
+
+const getPriceHUOBI = async (code) => {
+  const data = await fetch(
+    `https://api.huobi.pro/market/trade?symbol=${code}`
+  );
+  const dataJson = await data.json();
+  if (!dataJson || !dataJson.tick) return 0;
+  const price = dataJson.tick.data[0].price;
+  return price;
 };
 
 const getPriceBINANCE = async (code) => {
@@ -292,7 +304,7 @@ const startExecuteRound = async (pid) => {
   const timestampData = await predictionContract.timestamps(currentRoundNo - 1);
   const closeTimestamp = parseInt(timestampData.closeTimestamp) * 1000;
 
-  if(predictions[pid].apitype == 'KUCOIN'){
+  if(!predictions[pid].skipSavePrice){
 
     coloredLog(pid, "prediction closeTimestamp  " + closeTimestamp);
 
