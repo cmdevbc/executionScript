@@ -125,11 +125,11 @@ const checkPredictions = async () => {
         console.log("BINANCE time sync is", binanceTimeSync);
       }
 
-      const saveInterval = prediction.saveInterval || 1000;
+      const saveInterval =  1000;
       const priceArrLength = 10 + (prediction.interval * 1000) / saveInterval;
       setInterval(
         () => savePrice(prediction, priceArrLength),
-        prediction.saveInterval
+        saveInterval
       );
     }
   }
