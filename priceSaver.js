@@ -45,6 +45,7 @@ const getPriceHUOBI = async (code) => {
     const priceTemp = Math.round(parseFloat(price) * 100000000);
     const timestamp = Math.round(dataJson.tick.data[0].ts / 1000);
     const result =  { timestamp, price: priceTemp };
+    console.log('cem result huobi', result)
     return result;
   } catch (err) {
     return null;
@@ -124,7 +125,7 @@ const checkPredictions = async () => {
         console.log("BINANCE time sync is", binanceTimeSync);
       }
 
-      const saveInterval = prediction.saveInterval || 500;
+      const saveInterval = prediction.saveInterval || 1000;
       const priceArrLength = 10 + (prediction.interval * 1000) / saveInterval;
       setInterval(
         () => savePrice(prediction, priceArrLength),
