@@ -13,7 +13,7 @@ const fetch = (...args) =>
 const privateKeyTron = process.env.PRIVATE_KEY_TRON;
 
 const tronWeb = new TronWeb({
-  fullHost: "https://api.shasta.trongrid.io",
+  fullHost: "https://api.trongrid.io",
   headers: { "TRON-PRO-API-KEY": "19f694f6-87b8-4a97-be03-8cbba4805be9" },
   privateKey: privateKeyTron
 });
