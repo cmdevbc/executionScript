@@ -146,7 +146,7 @@ const updatePriceCache = async (pid) => {
     coloredLog(pid, "getting price for round:" + currentRoundNo);
     price = await getPrice(pid);
     priceTimestamp = Date.now();
-    if (!priceCache[pid]) priceCache[pid] = {};
+    priceCache[pid] = {};
     priceCache[pid][currentRoundNo] = price;
     priceCache[pid]["timestamp" + currentRoundNo] = priceTimestamp;
     savePriceDataToFile(pid, currentRoundNo, price, priceTimestamp);

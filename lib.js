@@ -595,6 +595,13 @@ const getNonce = async (pid, method) => {
     nonces[nonce] = {pid, method, timestamp};
   }
 
+
+  //delete old unsused property
+  if(nonces[nonce - 5] && nonces[nonce - 5].pid == pid){
+    delete nonces[nonce - 5];
+  }
+  ////
+
   //console.log(nonces);
   console.log('nonce:', nonce);
   assigningNonce = false;
@@ -634,7 +641,7 @@ const loadPriceDataToCache = (pid, currentRoundNo) => {
     let rawdata = fs.readFileSync(fileName);
     let roundPriceData = JSON.parse(rawdata);  
     if(roundPriceData.round == currentRoundNo){
-      if (!priceCache[pid]) priceCache[pid] = {};
+      priceCache[pid] = {};
       priceCache[pid][currentRoundNo] = roundPriceData.price;
       priceCache[pid]["timestamp" + currentRoundNo] = roundPriceData.timestamp;
     }
